@@ -1,14 +1,27 @@
 # -*- coding: utf-8 -*-
 """
 Google OAuth gate for CareerOS.
-Uses Streamlit's native st.login() (requires Streamlit 1.40+).
+Uses Streamlit's native st.login() (requires Streamlit 1.41+ with [auth] secrets configured).
 """
 import streamlit as st
 
 
 def require_login() -> None:
     """Block the page if user is not logged in. Show Google login button."""
-    if st.user.is_logged_in:
+
+    # Guard: [auth] section not yet configured in secrets.toml
+    try:
+        logged_in = st.user.is_logged_in
+    except AttributeError:
+        st.error(
+            "**OAuth not configured.** "
+            "Add the `[auth]` section to Streamlit Cloud secrets. "
+            "See `.streamlit/secrets.toml.example` for the required format."
+        )
+        st.stop()
+        return
+
+    if logged_in:
         return
 
     st.markdown("""
@@ -18,7 +31,7 @@ def require_login() -> None:
             Your AI-powered career coach for the Indian job market.
         </p>
         <p style='color:#888; font-size:0.85rem;'>
-            Resume building • Role clarity • Naukri & LinkedIn optimization
+            Resume building &bull; Role clarity &bull; Naukri &amp; LinkedIn optimization
         </p>
     </div>
     """, unsafe_allow_html=True)
