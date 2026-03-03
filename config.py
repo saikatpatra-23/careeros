@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def _secret(key: str, default: str = "") -> str:
+def _get_secret(key: str, default: str = "") -> str:
     val = os.getenv(key, "")
     if val:
         return val
@@ -13,6 +13,9 @@ def _secret(key: str, default: str = "") -> str:
         return st.secrets.get(key, default)
     except Exception:
         return default
+
+# backward compat alias
+_secret = _get_secret
 
 ANTHROPIC_API_KEY   = _secret("ANTHROPIC_API_KEY")
 CLAUDE_MODEL        = "claude-sonnet-4-6"
