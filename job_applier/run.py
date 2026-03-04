@@ -15,6 +15,23 @@ from cryptography.fernet import Fernet
 import anthropic
 from playwright.async_api import async_playwright
 
+# ntfy notifications (inline — no CareerOS module import needed in local runner)
+import hashlib
+
+def _ntfy_topic(email: str) -> str:
+    return "careeros-" + hashlib.md5(email.lower().strip().encode()).hexdigest()[:10]
+
+def _ntfy(topic: str, title: str, message: str, priority: str = "default",
+          tags: list = None, click_url: str = "") -> None:
+    try:
+        headers = {"Title": title, "Priority": priority}
+        if tags:       headers["Tags"]  = ",".join(tags)
+        if click_url:  headers["Click"] = click_url
+        requests.post(f"https://ntfy.sh/{topic}", data=message.encode("utf-8"),
+                      headers=headers, timeout=5)
+    except Exception:
+        pass
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 CONFIG_FILE = Path(__file__).parent / "config.json"
 LOG_FILE    = Path(__file__).parent / "logs" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
@@ -164,9 +181,9 @@ async def main():
             if applied:
                 results["hr_invites_applied"] += 1
                 log.info(f"HR-INVITE APPLY  {invite.get('title')} @ {invite.get('company')}")
-            # Notify immediately (HR invite = P1 = instant notification)
-            if make_webhook:
-                _notify_hr_invite(make_webhook, invite, applied, notif_contact, notif_pref)
+            # Notify immediately via ntfy (HR invite = P1 = instant notification)
+            _notify_hr_invite(make_webhook, invite, applied, notif_contact, notif_pref,
+                              user_email=inp.get("user_email", naukri_email))
         else:
             log.info(f"HR-INVITE SKIP  {invite.get('title')} @ {invite.get('company')} — {reason}")
 
@@ -215,17 +232,15 @@ async def main():
         f"{results['jobs_applied']} applied"
     )
 
-    # ── Notify via Make.com ────────────────────────────────────────────────────
-    if make_webhook:
-        try:
-            requests.post(make_webhook, json={
-                "type": "job_run_complete",
-                "notif_pref": notif_pref,
-                "contact": notif_contact,
-                "results": results,
-            }, timeout=10)
-        except Exception as e:
-            log.error(f"Webhook failed: {e}")
+    # ── Push notification via ntfy ─────────────────────────────────────────────
+    ntfy_topic = _ntfy_topic(inp.get("user_email", naukri_email))
+    hr_count   = results.get("hr_invites_applied", 0)
+    parts      = [f"Jobs scanned: {results['jobs_found']}",
+                  f"Applied: {results['jobs_applied']}"]
+    if hr_count:
+        parts.insert(0, f"HR invites processed: {hr_count}")
+    _ntfy(ntfy_topic, "CareerOS Run Complete", "\n".join(parts),
+          priority="low", tags=["white_check_mark"])
 
 
 # ── Login ──────────────────────────────────────────────────────────────────────
@@ -487,30 +502,24 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
 
 
 # ── HR invite instant notification ────────────────────────────────────────────
-def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool, contact: str, notif_pref: str):
-    """Fire an instant Make.com notification when an HR invite is processed."""
-    try:
-        status = "auto-applied ✅" if applied else "reviewed — not a match"
-        requests.post(make_webhook, json={
-            "type":       "hr_invite_processed",
-            "notif_pref": notif_pref,
-            "contact":    contact,
-            "message": (
-                f"🔥 HR Invite — {invite.get('company', '')}\n"
-                f"Role: {invite.get('title', '')}\n"
-                f"HR: {invite.get('hr_name', 'Unknown')}\n"
-                f"Status: CareerOS {status}"
-            ),
-            "invite": {
-                "title":   invite.get("title"),
-                "company": invite.get("company"),
-                "hr_name": invite.get("hr_name"),
-                "url":     invite.get("url"),
-                "applied": applied,
-            },
-        }, timeout=5)
-    except Exception as e:
-        log.warning(f"HR invite notification failed: {e}")
+def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
+                      contact: str, notif_pref: str, user_email: str = ""):
+    """Instant push notification (ntfy) when an HR invite is detected."""
+    topic  = _ntfy_topic(user_email or contact)
+    status = "Auto-applied by CareerOS" if applied else "Reviewed — not a strong match"
+    _ntfy(
+        topic     = topic,
+        title     = f"HR Invite — {invite.get('company', 'Unknown')}",
+        message   = (
+            f"Role: {invite.get('title', 'Unknown')}\n"
+            f"HR: {invite.get('hr_name', 'Unknown')}\n"
+            f"Status: {status}"
+        ),
+        priority  = "urgent",
+        tags      = ["fire", "briefcase"],
+        click_url = invite.get("url", ""),
+    )
+    log.info(f"ntfy notification sent for HR invite from {invite.get('company')}")
 
 
 # ── Apply ──────────────────────────────────────────────────────────────────────

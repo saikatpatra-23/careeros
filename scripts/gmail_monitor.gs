@@ -1,34 +1,38 @@
 /**
  * CareerOS — Gmail Monitor
  * Monitors Gmail for Naukri HR activity (invites, profile views, messages).
- * Runs every 5 minutes on Google's servers. Always-on. Free.
+ * Sends instant push notifications via ntfy.sh — free, no account needed.
+ * Runs every 5 minutes on Google's servers. Always-on. Zero cost.
  *
- * SETUP (one time):
+ * SETUP (one time, ~2 minutes):
  * 1. Open script.google.com → New project → paste this entire file
- * 2. Set MAKE_WEBHOOK_URL below (from your careeros_config.json → make_webhook_url)
- * 3. Click Run → setupTrigger()
- * 4. Authorize when prompted (Google needs permission to read Gmail)
- * Done. CareerOS now monitors your inbox 24/7 from Google's cloud.
+ * 2. Set NTFY_TOPIC below (copy from CareerOS → Setup page → your channel)
+ * 3. Click Run → setupTrigger() → authorize when prompted
+ * Done. CareerOS now monitors your Gmail 24/7 from Google's cloud.
  */
 
-// ── Config (set this) ──────────────────────────────────────────────────────
-var MAKE_WEBHOOK_URL = "YOUR_MAKE_WEBHOOK_URL"; // from careeros_config.json
-var PROCESSED_LABEL  = "CareerOS/Processed";     // Gmail label to mark done emails
+// ── Set this (copy from CareerOS Setup page) ──────────────────────────────
+var NTFY_TOPIC = "YOUR_CAREEROS_TOPIC";  // e.g. "careeros-a3f9b2c1d4"
+var NTFY_BASE  = "https://ntfy.sh";
+var PROCESSED_LABEL = "CareerOS/Processed";
 
 
-// ── Main function (runs every 5 minutes) ──────────────────────────────────
+// ── Main (runs every 5 minutes) ───────────────────────────────────────────
 function checkNaukriEmails() {
+  if (NTFY_TOPIC === "YOUR_CAREEROS_TOPIC") {
+    Logger.log("ERROR: Set your NTFY_TOPIC first. Find it on CareerOS Setup page.");
+    return;
+  }
+
   ensureLabelExists(PROCESSED_LABEL);
 
-  // Search last 8 minutes (slight overlap so no email is ever missed)
   var cutoff = new Date();
-  cutoff.setMinutes(cutoff.getMinutes() - 8);
-  var afterTimestamp = Math.floor(cutoff.getTime() / 1000);
+  cutoff.setMinutes(cutoff.getMinutes() - 8); // 8-min window (runs every 5)
 
-  var query = 'from:(naukri.com) after:' + afterTimestamp + ' -label:' + PROCESSED_LABEL;
+  var query = 'from:(naukri.com) after:' + Math.floor(cutoff.getTime() / 1000)
+              + ' -label:' + PROCESSED_LABEL;
   var threads = GmailApp.search(query, 0, 20);
 
-  var processed = 0;
   for (var i = 0; i < threads.length; i++) {
     var messages = threads[i].getMessages();
     for (var j = 0; j < messages.length; j++) {
@@ -37,197 +41,139 @@ function checkNaukriEmails() {
 
       var subject = msg.getSubject();
       var body    = msg.getPlainBody();
-      var inviteType = detectEventType(subject, body);
+      var type    = detectEventType(subject, body);
 
-      if (inviteType) {
-        var data = parseEmailData(subject, body, inviteType, msg.getFrom());
-        var sent = notifyCareerOS(data);
-        if (sent) {
-          Logger.log("Notified CareerOS: " + inviteType + " — " + data.company);
-          processed++;
-        }
+      if (type) {
+        var data = parseEmailData(subject, body, type);
+        sendNtfy(data);
+        Logger.log("Notified: " + type + " from " + data.company);
       }
-
-      // Label as processed regardless (so we don't re-scan it)
-      threads[i].addLabel(GmailApp.getUserLabelByName(PROCESSED_LABEL));
     }
-  }
-
-  if (processed > 0) {
-    Logger.log("Run complete. Notified CareerOS about " + processed + " event(s).");
+    threads[i].addLabel(GmailApp.getUserLabelByName(PROCESSED_LABEL));
   }
 }
 
 
-// ── Event type detection ──────────────────────────────────────────────────
+// ── Detect event type ─────────────────────────────────────────────────────
 function detectEventType(subject, body) {
   var text = (subject + " " + body.substring(0, 800)).toLowerCase();
 
-  // P1: HR directly invited you to apply — highest signal
-  if (text.match(/invited you to apply|job invite|apply now|recruiter.*invited/)) {
+  if (text.match(/invited you to apply|job invite|apply now|recruiter.*invited/))
     return "HR_INVITE";
-  }
-  // P1: HR sent you a direct message
-  if (text.match(/sent you a message|new message from|has messaged you/)) {
+  if (text.match(/sent you a message|new message from|has messaged you/))
     return "HR_MESSAGE";
-  }
-  // P2: HR viewed your profile (not yet invite, but warm signal)
-  if (text.match(/viewed your profile|has viewed your|profile was viewed/)) {
+  if (text.match(/viewed your profile|has viewed your|profile was viewed/))
     return "PROFILE_VIEW";
-  }
-  // P3: Job alert from Naukri (scheduled digest, lower priority)
-  if (text.match(/job alert|jobs matching|new jobs for you/)) {
-    return "JOB_ALERT";
-  }
+
   return null;
 }
 
 
-// ── Parse email into structured data ─────────────────────────────────────
-function parseEmailData(subject, body, eventType, from) {
-  var company = extractCompany(subject, body);
-  var role    = extractRole(subject, body);
-  var url     = extractNaukriUrl(body);
-  var hrName  = extractHRName(body);
-
+// ── Parse email into structured data ──────────────────────────────────────
+function parseEmailData(subject, body, type) {
   return {
-    event_type:    eventType,
-    company:       company,
-    role:          role,
-    hr_name:       hrName,
-    apply_url:     url,
-    subject:       subject,
-    from_email:    from,
-    detected_at:   new Date().toISOString(),
-    raw_snippet:   body.substring(0, 400),
-    priority:      (eventType === "HR_INVITE" || eventType === "HR_MESSAGE") ? "P1" : "P2"
+    type:    type,
+    company: extractCompany(subject, body),
+    role:    extractRole(subject, body),
+    hrName:  extractHRName(body),
+    url:     extractNaukriUrl(body),
+    snippet: body.substring(0, 200),
   };
 }
 
 function extractCompany(subject, body) {
-  // "TCS has invited you..." or "Message from Infosys recruiter"
-  var patterns = [
-    /^(.+?)\s+(?:has invited|has viewed|sent you|is looking)/i,
-    /recruiter from\s+(.+?)\s+(?:has|is)/i,
-    /from\s+(.+?)[,\.]/i,
-  ];
-  for (var i = 0; i < patterns.length; i++) {
-    var m = subject.match(patterns[i]);
-    if (m) return m[1].trim();
-  }
-  // Try body
-  var bm = body.match(/(?:company|employer|organisation)[\s:]+([^\n]+)/i);
-  return bm ? bm[1].trim() : "Unknown Company";
+  var m = subject.match(/^(.+?)\s+(?:has invited|has viewed|sent you|is looking)/i);
+  if (m) return m[1].trim();
+  m = body.match(/(?:company|employer)[\s:]+([^\n]+)/i);
+  return m ? m[1].trim() : "Unknown Company";
 }
 
 function extractRole(subject, body) {
-  var patterns = [
-    /(?:for the role of|position of|job title|opening for)\s+['""]?([^'""\n\.]+)/i,
-    /(?:apply for|applied for)\s+['""]?([^'""\n\.]+)/i,
-  ];
   var text = subject + " " + body;
-  for (var i = 0; i < patterns.length; i++) {
-    var m = text.match(patterns[i]);
-    if (m) return m[1].trim();
-  }
-  return "";
-}
-
-function extractNaukriUrl(body) {
-  var m = body.match(/https?:\/\/(?:www\.)?naukri\.com\/[^\s\n"'<>\)]+/i);
-  return m ? m[0] : "";
+  var m = text.match(/(?:for the role of|position of|opening for|apply for)\s+['""]?([^'""\n.]{3,60})/i);
+  return m ? m[1].trim() : "";
 }
 
 function extractHRName(body) {
-  var patterns = [
-    /(?:from|by|regards,?|thanks,?)\s+([A-Z][a-z]+ [A-Z][a-z]+)/,
-    /([A-Z][a-z]+ [A-Z][a-z]+)\s+(?:from|at|–|-)/,
-  ];
-  for (var i = 0; i < patterns.length; i++) {
-    var m = body.match(patterns[i]);
-    if (m) return m[1].trim();
-  }
-  return "";
+  var m = body.match(/([A-Z][a-z]+ [A-Z][a-z]+)\s+(?:from|at|–|-)/);
+  if (m) return m[1].trim();
+  m = body.match(/(?:regards,?|thanks,?)\s*\n\s*([A-Z][a-z]+ [A-Z][a-z]+)/);
+  return m ? m[1].trim() : "";
+}
+
+function extractNaukriUrl(body) {
+  var m = body.match(/https?:\/\/(?:www\.)?naukri\.com\/[^\s\n"'<)\]]+/i);
+  return m ? m[0] : "";
 }
 
 
-// ── Notify CareerOS via Make.com webhook ─────────────────────────────────
-function notifyCareerOS(data) {
-  if (!MAKE_WEBHOOK_URL || MAKE_WEBHOOK_URL === "YOUR_MAKE_WEBHOOK_URL") {
-    Logger.log("ERROR: MAKE_WEBHOOK_URL not set. Open this script and set it.");
-    return false;
-  }
+// ── Send ntfy push notification ───────────────────────────────────────────
+function sendNtfy(data) {
+  var config = buildNotification(data);
 
-  try {
-    var response = UrlFetchApp.fetch(MAKE_WEBHOOK_URL, {
-      method:             "post",
-      contentType:        "application/json",
-      payload:            JSON.stringify({
-        source:           "careeros_gmail_monitor",
-        type:             "hr_activity",
-        notif_pref:       "whatsapp",   // Make.com uses this to route notification
-        data:             data,
-        message: buildNotificationMessage(data),
-      }),
-      muteHttpExceptions: true,
-    });
-    return response.getResponseCode() === 200;
-  } catch (e) {
-    Logger.log("Webhook error: " + e.toString());
-    return false;
-  }
+  var headers = {
+    "Title":    config.title,
+    "Priority": config.priority,
+    "Tags":     config.tags,
+  };
+  if (data.url) headers["Click"] = data.url;
+
+  UrlFetchApp.fetch(NTFY_BASE + "/" + NTFY_TOPIC, {
+    method:             "post",
+    headers:            headers,
+    payload:            config.body,
+    muteHttpExceptions: true,
+  });
 }
 
-function buildNotificationMessage(data) {
-  if (data.event_type === "HR_INVITE") {
-    return "🔥 *P1 — HR Invite!*\n\n"
-      + "*Company:* " + data.company + "\n"
-      + (data.role    ? "*Role:* "    + data.role    + "\n" : "")
-      + (data.hr_name ? "*HR:* "      + data.hr_name + "\n" : "")
-      + (data.apply_url ? "\n👉 " + data.apply_url : "")
-      + "\n\nCareerOS will auto-apply on next run. Check Run History.";
+function buildNotification(data) {
+  if (data.type === "HR_INVITE") {
+    return {
+      title:    "HR Invite — " + data.company,
+      body:     "Role: " + (data.role || "Not specified") + "\n"
+                + "HR: " + (data.hrName || "Unknown") + "\n"
+                + "CareerOS will auto-apply on next run.",
+      priority: "urgent",
+      tags:     "fire,briefcase",
+    };
   }
-  if (data.event_type === "HR_MESSAGE") {
-    return "💬 *HR Message Received*\n\n"
-      + "*From:* " + data.company + "\n"
-      + (data.hr_name ? "*HR:* " + data.hr_name + "\n" : "")
-      + "\n📩 Check your Naukri inbox.";
+  if (data.type === "HR_MESSAGE") {
+    return {
+      title:    "HR Message — " + data.company,
+      body:     (data.hrName ? "From: " + data.hrName + "\n" : "")
+                + "Check your Naukri inbox.",
+      priority: "high",
+      tags:     "speech_balloon",
+    };
   }
-  if (data.event_type === "PROFILE_VIEW") {
-    return "👀 *Profile Viewed*\n\n"
-      + "*By:* " + data.company + "\n"
-      + "Your Naukri profile was viewed. Stay alert — invite may follow.";
-  }
-  return "📬 Naukri activity detected: " + data.event_type + " from " + data.company;
+  // PROFILE_VIEW
+  return {
+    title:    "Profile Viewed — " + data.company,
+    body:     "An HR viewed your Naukri profile. Stay alert — invite may follow.",
+    priority: "default",
+    tags:     "eyes",
+  };
 }
 
 
 // ── Gmail label helper ────────────────────────────────────────────────────
-function ensureLabelExists(labelName) {
-  var parts = labelName.split("/");
+function ensureLabelExists(name) {
+  var parts = name.split("/");
   var current = "";
   for (var i = 0; i < parts.length; i++) {
     current = i === 0 ? parts[i] : current + "/" + parts[i];
-    if (!GmailApp.getUserLabelByName(current)) {
+    if (!GmailApp.getUserLabelByName(current))
       GmailApp.createLabel(current);
-    }
   }
 }
 
 
 // ── One-time setup ────────────────────────────────────────────────────────
-/**
- * Run this ONCE to create the 5-minute trigger.
- * After that, checkNaukriEmails() runs automatically on Google's servers forever.
- */
 function setupTrigger() {
-  // Delete existing triggers first
-  var existing = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < existing.length; i++) {
-    ScriptApp.deleteTrigger(existing[i]);
-  }
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++)
+    ScriptApp.deleteTrigger(triggers[i]);
 
-  // Create new 5-minute trigger
   ScriptApp.newTrigger("checkNaukriEmails")
     .timeBased()
     .everyMinutes(5)
@@ -235,28 +181,29 @@ function setupTrigger() {
 
   ensureLabelExists(PROCESSED_LABEL);
 
-  Logger.log("✅ CareerOS Gmail Monitor is live!");
-  Logger.log("   Checks your Gmail every 5 minutes.");
-  Logger.log("   Processed emails get label: " + PROCESSED_LABEL);
-  Logger.log("   Notifications go to Make.com → WhatsApp/email.");
+  Logger.log("CareerOS Gmail Monitor is LIVE!");
+  Logger.log("Checks Gmail every 5 min. Notifies: " + NTFY_BASE + "/" + NTFY_TOPIC);
+
+  // Send test notification to confirm setup
+  UrlFetchApp.fetch(NTFY_BASE + "/" + NTFY_TOPIC, {
+    method:   "post",
+    headers:  { "Title": "CareerOS Gmail Monitor Active", "Priority": "default", "Tags": "tada" },
+    payload:  "Gmail monitor is running. You'll be notified instantly for HR invites and profile views.",
+    muteHttpExceptions: true,
+  });
 }
 
 
-// ── Manual test ───────────────────────────────────────────────────────────
-/**
- * Run this to test without waiting for a real Naukri email.
- */
-function testWebhook() {
+// ── Test without real email ───────────────────────────────────────────────
+function testNotification() {
   var testData = {
-    event_type:  "HR_INVITE",
-    company:     "Test Company Pvt Ltd",
-    role:        "Senior Business Analyst",
-    hr_name:     "Priya Sharma",
-    apply_url:   "https://www.naukri.com/job-listings-test",
-    detected_at: new Date().toISOString(),
-    priority:    "P1",
-    raw_snippet: "Test email — CareerOS webhook test.",
+    type:    "HR_INVITE",
+    company: "Test Company Pvt Ltd",
+    role:    "Senior Business Analyst",
+    hrName:  "Priya Sharma",
+    url:     "https://www.naukri.com",
+    snippet: "Test notification from CareerOS Gmail Monitor.",
   };
-  var result = notifyCareerOS(testData);
-  Logger.log(result ? "✅ Webhook test succeeded." : "❌ Webhook test failed. Check MAKE_WEBHOOK_URL.");
+  sendNtfy(testData);
+  Logger.log("Test notification sent to " + NTFY_BASE + "/" + NTFY_TOPIC);
 }

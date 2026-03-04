@@ -11,6 +11,7 @@ import streamlit as st
 from auth import require_login, get_user_email, get_user_name
 from persistence.store import UserStore
 from config import _get_secret
+from modules.notifications.ntfy import get_topic, notify_test
 import base64, json
 from cryptography.fernet import Fernet
 
@@ -58,26 +59,44 @@ already_setup = profile.get("setup_complete", False)
 if already_setup:
     st.success("Setup already complete! You can update your preferences here anytime.")
 
-st.markdown('<div class="section-title">📱 Notification Preference</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">📱 Notifications (Push — Instant & Free)</div>', unsafe_allow_html=True)
 
-notif_pref = st.radio(
-    "How should CareerOS notify you about job applications?",
-    ["WhatsApp", "Email"],
-    index=0 if profile.get("notif_pref", "WhatsApp") == "WhatsApp" else 1,
-    horizontal=True,
-)
+ntfy_topic = get_topic(email)
 
-if notif_pref == "WhatsApp":
-    phone = st.text_input(
-        "WhatsApp number (with country code)",
-        value=profile.get("phone", ""),
-        placeholder="+91 98765 43210",
+st.markdown(f"""
+<div style="background:#F0FDF4;border-radius:12px;padding:20px 24px;border:1.5px solid #6EE7B7;margin-bottom:16px;">
+    <div style="font-size:0.8rem;font-weight:600;color:#059669;text-transform:uppercase;
+                letter-spacing:0.05em;margin-bottom:8px;">Your Notification Channel</div>
+    <div style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#064E3B;
+                background:#D1FAE5;padding:8px 14px;border-radius:8px;display:inline-block;
+                margin-bottom:12px;">{ntfy_topic}</div>
+    <div style="font-size:0.85rem;color:#065F46;line-height:1.6;">
+        <strong>One-time setup (30 seconds):</strong><br>
+        1. Open the <strong>ntfy app</strong> on your phone<br>
+        2. Tap <strong>+</strong> → paste <code>{ntfy_topic}</code> → Subscribe<br>
+        3. Click <strong>Test Notification</strong> below to confirm it works
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+col_test, col_info = st.columns([1, 2])
+with col_test:
+    if st.button("🔔 Test Notification", use_container_width=True):
+        ok = notify_test(ntfy_topic)
+        if ok:
+            st.success("Sent! Check your ntfy app.")
+        else:
+            st.error("Failed. Check your internet connection.")
+with col_info:
+    st.caption(
+        "ntfy is free, open-source, and works without an account. "
+        "CareerOS uses it to alert you instantly when an HR invites you, "
+        "views your profile, or when a job run completes."
     )
-    contact_value = phone
-else:
-    contact_value = email
-    st.info(f"Notifications will be sent to: **{email}**")
-    phone = profile.get("phone", "")
+
+phone = profile.get("phone", "")
+notif_pref = "ntfy"
+contact_value = ntfy_topic
 
 st.markdown('<div class="section-title">🔐 Naukri Credentials</div>', unsafe_allow_html=True)
 
@@ -153,9 +172,10 @@ if st.button("Save Setup →", type="primary", use_container_width=True):
     # Save to UserStore
     profile.update({
         "setup_complete":      True,
-        "notif_pref":          notif_pref,
+        "notif_pref":          "ntfy",
+        "ntfy_topic":          ntfy_topic,
         "phone":               phone.strip(),
-        "contact_value":       contact_value,
+        "contact_value":       ntfy_topic,
         "naukri_email":        naukri_email.strip(),
         "naukri_pass_enc":     encrypted_pass,
         "preferred_locations": preferred_locations,
