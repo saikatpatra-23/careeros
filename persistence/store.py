@@ -73,6 +73,20 @@ class UserStore:
     def load_profile_optimizer(self) -> dict:
         return self.load("profile_optimizer.json", {})
 
+    def save_apply_prefs(self, data: dict) -> None:
+        self.save("apply_prefs.json", data)
+
+    def load_apply_prefs(self) -> dict:
+        return self.load("apply_prefs.json", {})
+
+    def save_apply_run(self, run: dict) -> None:
+        history = self.load("apply_history.json", [])
+        history.insert(0, run)
+        self.save("apply_history.json", history[:30])  # keep last 30 runs
+
+    def load_apply_history(self) -> list:
+        return self.load("apply_history.json", [])
+
     # ── Summary for dashboard ─────────────────────────────────────────────────
 
     def summary(self) -> dict:

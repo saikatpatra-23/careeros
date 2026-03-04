@@ -220,20 +220,25 @@ with c3:
         st.info("Complete Resume Builder first.")
 
 with c4:
+    has_apply = has_resume
+    badge4    = "Step 4" if has_apply else "🔒 Locked"
     st.markdown(f"""
     <div class="step-card">
-        <span class="step-badge">Coming Soon</span>
+        <span class="step-badge {'done' if has_apply else ''}">{badge4}</span>
         <div class="step-title">🤖 Smart Job Apply</div>
         <div class="step-body">
-            CareerOS applies to matched jobs automatically — Claude reads every JD,
-            scores it against your profile, and only applies where it makes sense.<br><br>
-            <em>Launching next.</em>
+            Claude reads every JD, scores it against your profile, and applies only
+            where it genuinely fits. Runs on your PC at 9:30 AM and 2 PM daily.<br><br>
+            {'Configure preferences and set up the local runner.' if has_apply else 'Build your resume first to unlock.'}
         </div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:{'100' if has_apply else '0'}%"></div></div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.page_link("pages/3_Role_Clarity.py", label="Not sure what role fits? →", icon="💡")
+    if has_apply:
+        st.page_link("pages/5_Smart_Apply.py", label="Set Up Auto-Apply →", icon="🤖")
+    else:
+        st.info("Complete Resume Builder first.")
 
 st.divider()
 st.caption("CareerOS • Built for the Indian job market • Powered by Claude AI • Your data stays on this server.")
