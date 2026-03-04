@@ -11,7 +11,14 @@ from auth import require_login, get_user_email, get_user_name
 from persistence.store import UserStore
 from modules.resume.session import ResumeBuilderSession
 from modules.resume.word_export import export_to_docx, get_filename
-from config import ANTHROPIC_API_KEY, MIN_PROBE_ROUNDS
+from config import MIN_PROBE_ROUNDS
+
+def _get_api_key() -> str:
+    """Read API key at runtime so st.secrets is available."""
+    try:
+        return st.secrets.get("ANTHROPIC_API_KEY", "") or os.getenv("ANTHROPIC_API_KEY", "")
+    except Exception:
+        return os.getenv("ANTHROPIC_API_KEY", "")
 
 st.set_page_config(page_title="Resume Builder – CareerOS", page_icon="📄", layout="wide")
 require_login()
@@ -188,7 +195,7 @@ def _milestone_bar(exchanges, ready):
 
 def _start_new_session(existing_profile):
     with st.spinner("Starting CareerOS session..."):
-        session = ResumeBuilderSession(api_key=ANTHROPIC_API_KEY, existing_profile=existing_profile)
+        session = ResumeBuilderSession(api_key=_get_api_key(), existing_profile=existing_profile)
         opening = session.start()
     st.session_state.rb_session  = session
     st.session_state.rb_chat     = [("assistant", opening)]
@@ -227,7 +234,7 @@ It will ask about your work, your achievements, and what makes you good at what 
                 if st.button("Continue from last session", type="primary", use_container_width=True):
                     saved_chat = store.load_chat_history()
                     if saved_chat:
-                        session = ResumeBuilderSession.restore(ANTHROPIC_API_KEY, saved_chat, len(saved_chat) // 2)
+                        session = ResumeBuilderSession.restore(_get_api_key(), saved_chat, len(saved_chat) // 2)
                         st.session_state.rb_session  = session
                         st.session_state.rb_chat     = [(m["role"], m["content"]) for m in saved_chat]
                         st.session_state.rb_exchange  = session.exchange_count
