@@ -32,16 +32,68 @@ def _ntfy(topic: str, title: str, message: str, priority: str = "default",
     except Exception:
         pass
 
-def _sync_results(email: str, results: dict, sync_url: str = "") -> None:
+def _sync_results(email: str, results: dict,
+                  supabase_url: str = "", supabase_key: str = "",
+                  sync_url: str = "") -> None:
     """
     Push run results to CareerOS web app.
-    Two modes:
-      1. sync_url set  → POST to web app API endpoint (cloud deployment)
-      2. sync_url empty → try writing to local UserStore (dev / same-machine mode)
+    Mode 1 (preferred): Supabase — direct DB write, bypasses Streamlit auth gate.
+    Mode 2 (legacy):    api_ingest URL — blocked by Streamlit Google OAuth.
+    Mode 3 (dev):       Same-machine local file write.
     """
-    # ── Mode 1: Cloud sync via GET + base64 payload ───────────────────────────
-    # sync_url should be: https://app.streamlit.app/api_ingest?token=SECRET&data=
-    # We append base64-encoded JSON payload to the URL.
+    # ── Mode 1: Supabase ──────────────────────────────────────────────────────
+    if supabase_url and supabase_key:
+        try:
+            headers = {
+                "apikey":        supabase_key,
+                "Authorization": f"Bearer {supabase_key}",
+                "Content-Type":  "application/json",
+                "Prefer":        "return=minimal",
+            }
+            row = {
+                "user_email":   email,
+                "run_date":     results.get("date", ""),
+                "jobs_found":   results.get("jobs_found", 0),
+                "jobs_applied": results.get("jobs_applied", 0),
+                "jobs_skipped": results.get("jobs_skipped", 0),
+                "applied_list": results.get("applied_list", []),
+                "skipped_list": results.get("skipped_list", []),
+                "hr_invites":   results.get("hr_invites", []),
+                "errors":       results.get("errors", []),
+            }
+            resp = requests.post(
+                f"{supabase_url.rstrip('/')}/rest/v1/run_history",
+                headers=headers, json=row, timeout=15,
+            )
+            if resp.status_code in (200, 201):
+                log.info("Results synced to Supabase.")
+            else:
+                log.warning(f"Supabase sync returned {resp.status_code}: {resp.text[:200]}")
+
+            # Insert each HR invite as an individual row
+            for inv in results.get("hr_invites", []):
+                if not inv.get("company"):
+                    continue
+                requests.post(
+                    f"{supabase_url.rstrip('/')}/rest/v1/hr_invites",
+                    headers=headers,
+                    json={
+                        "user_email":  email,
+                        "company":     inv.get("company", ""),
+                        "title":       inv.get("title", ""),
+                        "url":         inv.get("url", ""),
+                        "hr_name":     inv.get("hr_name", ""),
+                        "applied":     inv.get("applied", False),
+                        "reason":      inv.get("reason", ""),
+                        "detected_at": results.get("date", ""),
+                    },
+                    timeout=10,
+                )
+        except Exception as e:
+            log.warning(f"Supabase sync failed (non-fatal): {e}")
+        return
+
+    # ── Mode 2: api_ingest URL (legacy) ───────────────────────────────────────
     if sync_url:
         try:
             import base64 as _b64
@@ -292,9 +344,11 @@ async def main():
 
     # ── Sync results to web app (cloud or local) ─────────────────────────────────
     _sync_results(
-        email    = inp.get("user_email", naukri_email),
-        results  = results,
-        sync_url = inp.get("careeros_sync_url", ""),
+        email        = inp.get("user_email", naukri_email),
+        results      = results,
+        supabase_url = inp.get("supabase_url", ""),
+        supabase_key = inp.get("supabase_key", ""),
+        sync_url     = inp.get("careeros_sync_url", ""),
     )
 
     log.info(

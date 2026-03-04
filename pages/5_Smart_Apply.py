@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import zipfile
+import requests
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
@@ -22,10 +23,44 @@ def _get_fernet_key() -> str:
 def _get_sync_url() -> str:
     """Build the results sync URL using the app URL + SYNC_SECRET."""
     secret   = _get_secret("SYNC_SECRET", "")
-    app_url  = _get_secret("APP_URL", "")   # e.g. https://careeros.streamlit.app
+    app_url  = _get_secret("APP_URL", "")
     if not secret or not app_url:
         return ""
     return f"{app_url.rstrip('/')}/api_ingest?token={secret}&data="
+
+def _supabase_fetch(table: str, params: str) -> list:
+    """Fetch rows from Supabase via REST API. Returns [] if not configured."""
+    url = _get_secret("SUPABASE_URL", "")
+    key = _get_secret("SUPABASE_KEY", "")
+    if not url or not key:
+        return []
+    try:
+        resp = requests.get(
+            f"{url.rstrip('/')}/rest/v1/{table}?{params}",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            timeout=10,
+        )
+        return resp.json() if resp.status_code == 200 else []
+    except Exception:
+        return []
+
+def _load_run_history(email: str, store: UserStore) -> list:
+    rows = _supabase_fetch(
+        "run_history",
+        f"user_email=eq.{email}&order=created_at.desc&limit=30",
+    )
+    if rows:
+        for r in rows:
+            r.setdefault("date", r.get("run_date", ""))
+        return rows
+    return store.load_apply_history()
+
+def _load_hr_invites(email: str, store: UserStore) -> list:
+    rows = _supabase_fetch(
+        "hr_invites",
+        f"user_email=eq.{email}&order=created_at.desc&limit=50",
+    )
+    return rows if rows else store.load_hr_invites()
 
 st.set_page_config(page_title="Smart Apply – CareerOS", page_icon="🤖", layout="wide")
 require_login()
@@ -252,6 +287,8 @@ with tab_setup:
         "fernet_key":           _get_fernet_key(),
         "anthropic_key":        ANTHROPIC_API_KEY,
         "headless":             True,
+        "supabase_url":         _get_secret("SUPABASE_URL", ""),
+        "supabase_key":         _get_secret("SUPABASE_KEY", ""),
         "careeros_sync_url":    _get_sync_url(),
         "make_webhook_url":     "",
         "notif_pref":           profile.get("notif_pref", "ntfy"),
@@ -365,7 +402,7 @@ with tab_history:
     st.markdown("### Application Run History")
     st.caption("Every run your local CareerOS runner completes is logged here.")
 
-    history = store.load_apply_history()
+    history = _load_run_history(email, store)
 
     if not history:
         st.info("No runs yet. Set up the local runner and complete your first run — results will appear here automatically.")
@@ -481,10 +518,10 @@ with tab_inbox:
     st.divider()
 
     # Show HR invite history
-    hr_invites = store.load_hr_invites()
+    hr_invites = _load_hr_invites(email, store)
 
-    # Also pull invites from run history
-    run_history = store.load_apply_history()
+    # Also pull invites from run history (only needed when Supabase is not configured)
+    run_history = _load_run_history(email, store) if not _get_secret("SUPABASE_URL", "") else []
     for run in run_history:
         for inv in run.get("hr_invites", []):
             inv["detected_at"] = run.get("date", "")
