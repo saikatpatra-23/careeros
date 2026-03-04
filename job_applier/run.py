@@ -277,65 +277,64 @@ async def main():
             results["jobs_found"] = len(jobs)
             log.info(f"Found {len(jobs)} jobs")
 
-        await browser.close()
+        # ── Process HR invites (P1 — always process, no cap) ─────────────────
+        for invite in hr_invites:
+            matched, reason = _domain_match(ai_client, invite, resume_data, domain_family)
+            invite_record = {
+                "title":   invite.get("title"),
+                "company": invite.get("company"),
+                "url":     invite.get("url"),
+                "hr_name": invite.get("hr_name", ""),
+                "reason":  reason,
+                "applied": False,
+            }
 
-    # ── Process HR invites (P1 — always process, no cap) ─────────────────────
-    for invite in hr_invites:
-        matched, reason = _domain_match(ai_client, invite, resume_data, domain_family)
-        invite_record = {
-            "title":   invite.get("title"),
-            "company": invite.get("company"),
-            "url":     invite.get("url"),
-            "hr_name": invite.get("hr_name", ""),
-            "reason":  reason,
-            "applied": False,
-        }
+            if matched:
+                tailored = _tailor_resume(ai_client, invite, resume_data)
+                applied  = await _apply_job(page, invite, tailored, make_webhook,
+                                            notif_contact, notif_pref, is_hr_invite=True)
+                invite_record["applied"] = applied
+                if applied:
+                    results["hr_invites_applied"] += 1
+                    log.info(f"HR-INVITE APPLY  {invite.get('title')} @ {invite.get('company')}")
+                _notify_hr_invite(make_webhook, invite, applied, notif_contact, notif_pref,
+                                  user_email=inp.get("user_email", naukri_email))
+            else:
+                log.info(f"HR-INVITE SKIP  {invite.get('title')} @ {invite.get('company')} — {reason}")
 
-        if matched:
-            tailored = _tailor_resume(ai_client, invite, resume_data)
-            applied  = await _apply_job(invite, tailored, make_webhook, notif_contact, notif_pref,
-                                        is_hr_invite=True)
-            invite_record["applied"] = applied
+            results["hr_invites"].append(invite_record)
+            await asyncio.sleep(random.uniform(2, 4))
+
+        # ── Process jobs ───────────────────────────────────────────────────────
+        for job in jobs:
+            if results["jobs_applied"] >= max_apply:
+                break
+
+            matched, reason = _domain_match(ai_client, job, resume_data, domain_family)
+            if not matched:
+                results["jobs_skipped"] += 1
+                results["skipped_list"].append({
+                    "title": job.get("title"), "company": job.get("company"), "reason": reason
+                })
+                log.info(f"SKIP  {job.get('title')} @ {job.get('company')} — {reason}")
+                continue
+
+            results["jobs_matched"] += 1
+            tailored = _tailor_resume(ai_client, job, resume_data)
+            applied  = await _apply_job(page, job, tailored, make_webhook,
+                                        notif_contact, notif_pref, is_hr_invite=False)
+
             if applied:
-                results["hr_invites_applied"] += 1
-                log.info(f"HR-INVITE APPLY  {invite.get('title')} @ {invite.get('company')}")
-            # Notify immediately via ntfy (HR invite = P1 = instant notification)
-            _notify_hr_invite(make_webhook, invite, applied, notif_contact, notif_pref,
-                              user_email=inp.get("user_email", naukri_email))
-        else:
-            log.info(f"HR-INVITE SKIP  {invite.get('title')} @ {invite.get('company')} — {reason}")
+                results["jobs_applied"] += 1
+                log.info(f"APPLY {job.get('title')} @ {job.get('company')}")
+                results["applied_list"].append({
+                    "title": job.get("title"), "company": job.get("company"),
+                    "url": job.get("url"), "easy_apply": job.get("is_easy_apply"),
+                })
 
-        results["hr_invites"].append(invite_record)
-        await asyncio.sleep(random.uniform(2, 4))
+            await asyncio.sleep(random.uniform(2, 4))
 
-    # ── Process jobs ───────────────────────────────────────────────────────────
-    for job in jobs:
-        if results["jobs_applied"] >= max_apply:
-            break
-
-        matched, reason = _domain_match(ai_client, job, resume_data, domain_family)
-        if not matched:
-            results["jobs_skipped"] += 1
-            results["skipped_list"].append({
-                "title": job.get("title"), "company": job.get("company"), "reason": reason
-            })
-            log.info(f"SKIP  {job.get('title')} @ {job.get('company')} — {reason}")
-            continue
-
-        results["jobs_matched"] += 1
-        tailored = _tailor_resume(ai_client, job, resume_data)
-        applied  = await _apply_job(job, tailored, make_webhook, notif_contact, notif_pref,
-                                    is_hr_invite=False)
-
-        if applied:
-            results["jobs_applied"] += 1
-            log.info(f"APPLY {job.get('title')} @ {job.get('company')}")
-            results["applied_list"].append({
-                "title": job.get("title"), "company": job.get("company"),
-                "url": job.get("url"), "easy_apply": job.get("is_easy_apply"),
-            })
-
-        await asyncio.sleep(random.uniform(2, 4))
+        await browser.close()
 
     # ── Save results locally ────────────────────────────────────────────────────
     results_file = Path(__file__).parent / "logs" / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -550,38 +549,90 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
     Returns list of invite dicts (same shape as job listings).
     """
     invites = []
+
+    # Naukri pages to check for recruiter-initiated contact
     inbox_urls = [
-        "https://www.naukri.com/mnjuser/notification",
-        "https://www.naukri.com/mnjuser/myapps",
+        "https://www.naukri.com/mnjuser/homepage",      # homepage has recruiter activity feed
+        "https://www.naukri.com/mnjuser/notification",  # notification bell
+        "https://www.naukri.com/recruiter-connects",    # direct recruiter connects
     ]
 
     for url in inbox_urls:
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(random.randint(1500, 2500))
+            await page.wait_for_timeout(random.randint(2000, 3000))
 
-            # Look for recruiter activity cards
+            # ── Strategy 1: DOM selectors ──────────────────────────────────────
             selectors = [
-                "div[class*='recruiterActivity']",
-                "div[class*='notification-item']",
-                "li[class*='invite']",
-                "div[class*='jobInvite']",
+                # Naukri 2024 notification / recruiter connect cards
                 "div[class*='recInvite']",
+                "div[class*='recruiter-connect']",
+                "div[class*='recruiterConnect']",
+                "article[class*='jobTuple'][data-src]",
+                "div[class*='notification-item']",
+                "li[class*='notification']",
+                "div[class*='activityCard']",
+                "div[class*='inviteCard']",
+                # Broader fallback — any card containing "invite" text
+                "div[class*='invite']",
+                "li[class*='invite']",
             ]
 
             cards = []
             for sel in selectors:
-                cards = await page.query_selector_all(sel)
-                if cards:
-                    log.info(f"Found {len(cards)} recruiter activity cards via: {sel}")
+                found = await page.query_selector_all(sel)
+                if found:
+                    log.info(f"Recruiter inbox: {len(found)} cards via [{sel}] on {url}")
+                    cards = found
                     break
 
+            # ── Strategy 2: JS extraction if DOM fails ─────────────────────────
+            if not cards:
+                raw = await page.evaluate("""() => {
+                    const results = [];
+                    // Look for any job-link + company pair inside notification-area
+                    document.querySelectorAll('a[href*="job-listings"], a[href*="jobs?"]').forEach(a => {
+                        const card = a.closest('li, div[class*="card"], div[class*="item"]');
+                        if (!card) return;
+                        const txt = card.innerText || '';
+                        if (!txt.includes('applied') && !txt.includes('viewed')) {
+                            const compEl = card.querySelector('a[class*="comp"], span[class*="comp"]');
+                            results.push({
+                                title:   a.innerText.trim(),
+                                company: compEl ? compEl.innerText.trim() : '',
+                                url:     a.href,
+                            });
+                        }
+                    });
+                    return results.slice(0, 10);
+                }""")
+                for item in (raw or []):
+                    if item.get("title") and item.get("company"):
+                        invites.append({
+                            "title":         item["title"],
+                            "company":       item["company"],
+                            "hr_name":       "",
+                            "description":   "",
+                            "url":           item["url"],
+                            "is_easy_apply": True,
+                            "source":        "hr_invite",
+                            "age_days":      0,
+                        })
+                        log.info(f"  HR Invite (JS): {item['title']} @ {item['company']}")
+
+            # ── Parse DOM cards ────────────────────────────────────────────────
             for card in cards[:10]:
                 try:
-                    title_el   = await card.query_selector("a[class*='title'], a[class*='job'], h3, h4")
-                    company_el = await card.query_selector("span[class*='comp'], a[class*='comp'], span[class*='org']")
-                    hr_el      = await card.query_selector("span[class*='recruiter'], span[class*='hr'], span[class*='sender']")
-                    link_el    = await card.query_selector("a[href*='naukri.com'], a[class*='apply']")
+                    title_el   = await card.query_selector(
+                        "a[class*='title'], a[class*='job-title'], h3 a, h4 a, a.title, .job-title")
+                    company_el = await card.query_selector(
+                        "a.comp-name, a[class*='comp-name'], span[class*='comp'], "
+                        "a[class*='company'], span[class*='company']")
+                    hr_el      = await card.query_selector(
+                        "span[class*='recruiter'], span[class*='hr-name'], "
+                        "span[class*='sender'], .recruiter-name")
+                    link_el    = (title_el or
+                                  await card.query_selector("a[href*='job-listings'], a[href*='naukri.com/']"))
 
                     title   = (await title_el.inner_text()).strip()   if title_el   else ""
                     company = (await company_el.inner_text()).strip() if company_el else ""
@@ -592,21 +643,21 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
                         continue
 
                     invites.append({
-                        "title":        title or "Role from Recruiter",
-                        "company":      company,
-                        "hr_name":      hr_name,
-                        "description":  "",
-                        "url":          url_val or url,
+                        "title":         title or "Role from Recruiter",
+                        "company":       company,
+                        "hr_name":       hr_name,
+                        "description":   "",
+                        "url":           url_val or url,
                         "is_easy_apply": True,
-                        "source":       "hr_invite",
-                        "age_days":     0,  # Fresh — HR just contacted
+                        "source":        "hr_invite",
+                        "age_days":      0,
                     })
                     log.info(f"  HR Invite: {title} @ {company}")
                 except Exception:
                     continue
 
             if invites:
-                break  # Found invites — no need to check other URLs
+                break  # Found on this URL — don't check next
 
         except Exception as e:
             log.warning(f"Recruiter inbox check failed for {url}: {e}")
@@ -637,22 +688,96 @@ def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
 
 
 # ── Apply ──────────────────────────────────────────────────────────────────────
-async def _apply_job(job, resume_data, make_webhook, notif_contact, notif_pref,
+async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_pref,
                      is_hr_invite: bool = False):
+    """
+    Navigate to the job URL and click Apply on Naukri (Easy Apply flow).
+    Falls back gracefully if the apply button is not found or already applied.
+    """
+    url = job.get("url", "")
+    title   = job.get("title", "Unknown")
+    company = job.get("company", "Unknown")
+
     try:
+        if not url:
+            log.warning(f"No URL for {title} @ {company} — skipping apply")
+            return False
+
+        await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        await page.wait_for_timeout(random.randint(2000, 3000))
+
+        # ── Step 1: Find and click the main Apply button ───────────────────────
+        apply_selectors = [
+            "button.styles_apply-button__N2-qy",   # Naukri 2024 class
+            "button[class*='apply-button']",
+            "a[class*='apply-button']",
+            ".applyButton",
+            "button.apply-button",
+            "button:has-text('Easy Apply')",
+            "button:has-text('Apply Now')",
+            "button:has-text('Apply')",
+            "#apply-button",
+        ]
+        apply_btn = None
+        for sel in apply_selectors:
+            try:
+                apply_btn = await page.query_selector(sel)
+                if apply_btn:
+                    is_disabled = await apply_btn.get_attribute("disabled")
+                    btn_text = (await apply_btn.inner_text()).strip().lower()
+                    if is_disabled is not None or "applied" in btn_text:
+                        log.info(f"Already applied / disabled — {title} @ {company}")
+                        return False
+                    break
+            except Exception:
+                continue
+
+        if not apply_btn:
+            log.warning(f"Apply button not found — {title} @ {company}")
+            return False
+
+        await apply_btn.click()
+        await page.wait_for_timeout(random.randint(1500, 2500))
+
+        # ── Step 2: Handle Easy Apply modal / drawer ────────────────────────────
+        # Some jobs show a modal; some go directly to a confirmation page
+        submit_selectors = [
+            "button:has-text('Submit Application')",
+            "button:has-text('Submit')",
+            "button[class*='submit']",
+            "button.apply-button",     # secondary apply inside modal
+            "button:has-text('Apply')",
+        ]
+        for sel in submit_selectors:
+            try:
+                submit_btn = await page.query_selector(sel)
+                if submit_btn:
+                    await submit_btn.click()
+                    await page.wait_for_timeout(1500)
+                    log.info(f"Submitted application — {title} @ {company}")
+                    break
+            except Exception:
+                continue
+
+        # ── Step 3: Webhook notification (Make.com / n8n) ──────────────────────
         if make_webhook:
-            requests.post(make_webhook, json={
-                "type":         "hr_invite_apply" if is_hr_invite else (
-                                "easy_apply" if job.get("is_easy_apply") else "company_portal"),
-                "job_title":    job.get("title"),
-                "company":      job.get("company"),
-                "job_url":      job.get("url"),
-                "contact":      notif_contact,
-                "notif_pref":   notif_pref,
-                "is_hr_invite": is_hr_invite,
-            }, timeout=5)
+            try:
+                requests.post(make_webhook, json={
+                    "type":         "hr_invite_apply" if is_hr_invite else "easy_apply",
+                    "job_title":    title,
+                    "company":      company,
+                    "job_url":      url,
+                    "contact":      notif_contact,
+                    "notif_pref":   notif_pref,
+                    "is_hr_invite": is_hr_invite,
+                }, timeout=5)
+            except Exception:
+                pass
+
         return True
-    except Exception:
+
+    except Exception as e:
+        log.warning(f"Apply failed for {title} @ {company}: {e}")
         return False
 
 
