@@ -552,115 +552,88 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
 
     # Naukri pages to check for recruiter-initiated contact
     inbox_urls = [
-        "https://www.naukri.com/mnjuser/homepage",      # homepage has recruiter activity feed
-        "https://www.naukri.com/mnjuser/notification",  # notification bell
-        "https://www.naukri.com/recruiter-connects",    # direct recruiter connects
+        "https://www.naukri.com/mnjuser/homepage",      # power-invite-card widgets
+        "https://www.naukri.com/mnjuser/notification",  # NVites tab
     ]
 
-    for url in inbox_urls:
+    for inbox_url in inbox_urls:
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(random.randint(2000, 3000))
+            await page.goto(inbox_url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(random.randint(2500, 3500))
 
-            # ── Strategy 1: DOM selectors ──────────────────────────────────────
-            selectors = [
-                # Naukri 2024 notification / recruiter connect cards
-                "div[class*='recInvite']",
-                "div[class*='recruiter-connect']",
-                "div[class*='recruiterConnect']",
-                "article[class*='jobTuple'][data-src]",
-                "div[class*='notification-item']",
-                "li[class*='notification']",
-                "div[class*='activityCard']",
-                "div[class*='inviteCard']",
-                # Broader fallback — any card containing "invite" text
-                "div[class*='invite']",
-                "li[class*='invite']",
+            # ── Naukri "power-invite-card" (confirmed structure as of 2024) ────
+            # Card:    div.power-invite-card  (or div.rmj-card)
+            # Title:   h2.comp-name           (job title, despite the misleading class)
+            # Company: h4.rmj-title           (company / "Hiring for XYZ")
+            # Time:    h4.rmj-time            (e.g. "Invited 6d ago")
+            # URL:     click the card → navigate to job detail page
+            card_selectors = [
+                "div.power-invite-card",
+                "div.rmj-card.power-invite-card",
+                "div[class*='power-invite']",
+                "div[class*='rmj-card']",
             ]
-
             cards = []
-            for sel in selectors:
+            for sel in card_selectors:
                 found = await page.query_selector_all(sel)
                 if found:
-                    log.info(f"Recruiter inbox: {len(found)} cards via [{sel}] on {url}")
+                    log.info(f"Recruiter inbox: {len(found)} power-invite cards via [{sel}]")
                     cards = found
                     break
 
-            # ── Strategy 2: JS extraction if DOM fails ─────────────────────────
-            if not cards:
-                raw = await page.evaluate("""() => {
-                    const results = [];
-                    // Look for any job-link + company pair inside notification-area
-                    document.querySelectorAll('a[href*="job-listings"], a[href*="jobs?"]').forEach(a => {
-                        const card = a.closest('li, div[class*="card"], div[class*="item"]');
-                        if (!card) return;
-                        const txt = card.innerText || '';
-                        if (!txt.includes('applied') && !txt.includes('viewed')) {
-                            const compEl = card.querySelector('a[class*="comp"], span[class*="comp"]');
-                            results.push({
-                                title:   a.innerText.trim(),
-                                company: compEl ? compEl.innerText.trim() : '',
-                                url:     a.href,
-                            });
-                        }
-                    });
-                    return results.slice(0, 10);
-                }""")
-                for item in (raw or []):
-                    if item.get("title") and item.get("company"):
-                        invites.append({
-                            "title":         item["title"],
-                            "company":       item["company"],
-                            "hr_name":       "",
-                            "description":   "",
-                            "url":           item["url"],
-                            "is_easy_apply": True,
-                            "source":        "hr_invite",
-                            "age_days":      0,
-                        })
-                        log.info(f"  HR Invite (JS): {item['title']} @ {item['company']}")
-
-            # ── Parse DOM cards ────────────────────────────────────────────────
             for card in cards[:10]:
                 try:
-                    title_el   = await card.query_selector(
-                        "a[class*='title'], a[class*='job-title'], h3 a, h4 a, a.title, .job-title")
-                    company_el = await card.query_selector(
-                        "a.comp-name, a[class*='comp-name'], span[class*='comp'], "
-                        "a[class*='company'], span[class*='company']")
-                    hr_el      = await card.query_selector(
-                        "span[class*='recruiter'], span[class*='hr-name'], "
-                        "span[class*='sender'], .recruiter-name")
-                    link_el    = (title_el or
-                                  await card.query_selector("a[href*='job-listings'], a[href*='naukri.com/']"))
+                    title_el   = await card.query_selector("h2.comp-name, h2[class*='comp'], h3, h2")
+                    company_el = await card.query_selector("h4.rmj-title, h4[class*='title'], h4")
+                    time_el    = await card.query_selector("h4.rmj-time, h4[class*='time'], span[class*='time']")
 
                     title   = (await title_el.inner_text()).strip()   if title_el   else ""
                     company = (await company_el.inner_text()).strip() if company_el else ""
-                    hr_name = (await hr_el.inner_text()).strip()      if hr_el      else ""
-                    url_val = await link_el.get_attribute("href")     if link_el    else ""
+                    age_str = (await time_el.inner_text()).strip()    if time_el    else ""
 
-                    if not title and not company:
+                    # Parse age (e.g. "Invited 6d ago" → 6)
+                    import re as _re
+                    age_match = _re.search(r"(\d+)\s*d", age_str)
+                    age_days  = int(age_match.group(1)) if age_match else 0
+
+                    if not title:
                         continue
 
+                    # Click the card to navigate to the job detail and get URL
+                    job_url = inbox_url  # fallback
+                    try:
+                        async with page.expect_navigation(timeout=8000):
+                            await card.click()
+                        job_url = page.url
+                        await page.wait_for_timeout(1000)
+                        await page.go_back()
+                        await page.wait_for_timeout(1500)
+                    except Exception:
+                        # Card click didn't navigate — check for a link inside
+                        link_el = await card.query_selector("a[href]")
+                        if link_el:
+                            job_url = await link_el.get_attribute("href") or inbox_url
+
                     invites.append({
-                        "title":         title or "Role from Recruiter",
-                        "company":       company,
-                        "hr_name":       hr_name,
+                        "title":         title,
+                        "company":       company.replace("Hiring for ", "").strip() or company,
+                        "hr_name":       "",
                         "description":   "",
-                        "url":           url_val or url,
+                        "url":           job_url,
                         "is_easy_apply": True,
                         "source":        "hr_invite",
-                        "age_days":      0,
+                        "age_days":      age_days,
                     })
-                    log.info(f"  HR Invite: {title} @ {company}")
-                except Exception:
+                    log.info(f"  HR Invite: {title} @ {company} ({age_str})")
+                except Exception as e:
+                    log.warning(f"  HR invite card parse error: {e}")
                     continue
 
             if invites:
-                break  # Found on this URL — don't check next
+                break
 
         except Exception as e:
-            log.warning(f"Recruiter inbox check failed for {url}: {e}")
+            log.warning(f"Recruiter inbox check failed for {inbox_url}: {e}")
             results["errors"].append(f"Recruiter inbox error: {str(e)[:150]}")
 
     return invites
