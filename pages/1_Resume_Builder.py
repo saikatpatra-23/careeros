@@ -186,6 +186,16 @@ def _milestone_bar(exchanges, ready):
     st.markdown(f'<div class="milestone-bar">{"".join(parts)}</div>', unsafe_allow_html=True)
 
 
+def _start_new_session(existing_profile):
+    with st.spinner("Starting CareerOS session..."):
+        session = ResumeBuilderSession(api_key=ANTHROPIC_API_KEY, existing_profile=existing_profile)
+        opening = session.start()
+    st.session_state.rb_session  = session
+    st.session_state.rb_chat     = [("assistant", opening)]
+    st.session_state.rb_step     = 2
+    st.rerun()
+
+
 # =============================================================================
 # STEP 1 — INTRO
 # =============================================================================
@@ -249,16 +259,6 @@ It will ask about your work, your achievements, and what makes you good at what 
 
 </div>
         """, unsafe_allow_html=True)
-
-
-def _start_new_session(existing_profile):
-    with st.spinner("Starting CareerOS session..."):
-        session = ResumeBuilderSession(api_key=ANTHROPIC_API_KEY, existing_profile=existing_profile)
-        opening = session.start()
-    st.session_state.rb_session  = session
-    st.session_state.rb_chat     = [("assistant", opening)]
-    st.session_state.rb_step     = 2
-    st.rerun()
 
 
 # =============================================================================
