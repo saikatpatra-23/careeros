@@ -241,4 +241,61 @@ with c4:
         st.info("Complete Resume Builder first.")
 
 st.divider()
+
+# ── Application Tools row ─────────────────────────────────────────────────────
+st.markdown("### Application Tools")
+cover_letters = store.load_cover_letters()
+has_cl = has_resume
+
+tool_c1, tool_c2, tool_c3 = st.columns(3)
+
+with tool_c1:
+    cl_count = len(cover_letters)
+    st.markdown(f"""
+    <div class="step-card">
+        <span class="step-badge {'done' if cl_count > 0 else ''}">{'✅ ' + str(cl_count) + ' generated' if cl_count > 0 else 'Tool'}</span>
+        <div class="step-title">✉️ Cover Letter Generator</div>
+        <div class="step-body">
+            Paste a JD → get a tailored cover letter in 10 seconds.<br>
+            Optimised for Indian recruiter attention spans — 250-350 words, hooks, and real numbers.<br><br>
+            {'Generate letters for every application you send.' if has_cl else 'Build your resume first to unlock.'}
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:{'100' if has_cl else '0'}%"></div></div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    if has_cl:
+        st.page_link("pages/6_Cover_Letter.py", label="Write Cover Letter →", icon="✉️")
+    else:
+        st.info("Complete Resume Builder first.")
+
+with tool_c2:
+    st.markdown(f"""
+    <div class="step-card">
+        <span class="step-badge">Coming Soon</span>
+        <div class="step-title">📋 Application Tracker</div>
+        <div class="step-body">
+            Track every job you've applied to. Follow-up reminders, status updates,
+            and interview scheduling — all in one place.<br><br>
+            <em>Coming soon.</em>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tool_c3:
+    st.markdown(f"""
+    <div class="step-card">
+        <span class="step-badge">Coming Soon</span>
+        <div class="step-title">🎤 Interview Prep</div>
+        <div class="step-body">
+            Role-specific Q&amp;A, HR round prep, STAR-format answers tailored
+            to your exact background and the company you're interviewing at.<br><br>
+            <em>Coming soon.</em>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.divider()
 st.caption("CareerOS • Built for the Indian job market • Powered by Claude AI • Your data stays on this server.")

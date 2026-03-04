@@ -87,6 +87,14 @@ class UserStore:
     def load_apply_history(self) -> list:
         return self.load("apply_history.json", [])
 
+    def save_cover_letter(self, data: dict) -> None:
+        history = self.load("cover_letters.json", [])
+        history.insert(0, data)
+        self.save("cover_letters.json", history[:10])  # keep last 10
+
+    def load_cover_letters(self) -> list:
+        return self.load("cover_letters.json", [])
+
     # ── Summary for dashboard ─────────────────────────────────────────────────
 
     def summary(self) -> dict:
