@@ -1,0 +1,27 @@
+{
+  "_comment": "This is a template. Get your actual config by downloading the Installer ZIP from CareerOS Smart Apply page.",
+  "user_email": "your@gmail.com",
+  "naukri_email": "your.naukri@email.com",
+  "naukri_pass_enc": "generated-by-web-app",
+  "fernet_key": "generated-by-web-app",
+  "anthropic_key": "provided-by-careeros",
+  "careeros_sync_url": "provided-by-careeros",
+  "headless": true,
+  "make_webhook_url": "",
+  "notif_pref": "ntfy",
+  "notification_contact": "",
+  "preferred_locations": ["Mumbai", "Pune", "Bengaluru"],
+  "salary_min": 10,
+  "max_jobs_per_run": 5,
+  "exp_min": 3,
+  "avoid_domains": [],
+  "alt_titles": [],
+  "resume_data": {
+    "target_title": "Your Target Role",
+    "domain_family": "enterprise_IT",
+    "summary": "Generated from your Resume Builder session",
+    "ats_keywords": [],
+    "experience": [],
+    "skills": {}
+  }
+}

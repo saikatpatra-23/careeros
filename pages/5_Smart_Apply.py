@@ -3,13 +3,29 @@
 Page 5 — Smart Job Apply
 Configure preferences, download local runner config, view run history.
 """
-import os, sys, json
+import io
+import os
+import sys
+import json
+import zipfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email
 from persistence.store import UserStore
-from config import ANTHROPIC_API_KEY
+from config import ANTHROPIC_API_KEY, _get_secret
+from pathlib import Path
+
+def _get_fernet_key() -> str:
+    return _get_secret("FERNET_KEY", "")
+
+def _get_sync_url() -> str:
+    """Build the results sync URL using the app URL + SYNC_SECRET."""
+    secret   = _get_secret("SYNC_SECRET", "")
+    app_url  = _get_secret("APP_URL", "")   # e.g. https://careeros.streamlit.app
+    if not secret or not app_url:
+        return ""
+    return f"{app_url.rstrip('/')}/api_ingest?token={secret}&data="
 
 st.set_page_config(page_title="Smart Apply – CareerOS", page_icon="🤖", layout="wide")
 require_login()
@@ -209,11 +225,10 @@ with tab_setup:
     st.markdown("<br>", unsafe_allow_html=True)
 
     steps = [
-        ("Download your config file", "Click the button below → save <code>careeros_config.json</code> to your PC."),
-        ("Place it in the CareerOS folder", "Put it alongside <code>watcher.py</code> and <code>run.py</code> in the job_applier folder."),
-        ("Run the watcher", "Open Command Prompt: <code>python watcher.py</code><br>It will auto-run at <strong>9:30 AM</strong> and <strong>2:00 PM</strong> daily."),
-        ("Or trigger manually", "Create an empty file named <code>trigger.txt</code> in the same folder — watcher picks it up instantly."),
-        ("Results appear here", "After each run, come back to the <strong>Run History</strong> tab to see what was applied and what was skipped."),
+        ("Download the installer package", "One ZIP — everything inside. Click the button below."),
+        ("Unzip to any folder", "e.g. <code>C:\\CareerOS\\</code>. Keep the folder intact."),
+        ("Run the installer once", "Right-click PowerShell → <strong>Run as Administrator</strong> → navigate to the folder → run <code>.\\install_service.ps1</code>"),
+        ("Done — it runs forever", "CareerOS Watcher starts on every boot, runs at <strong>9:30 AM</strong> and <strong>2 PM</strong> daily. Results appear in Run History automatically."),
     ]
 
     for i, (title, body) in enumerate(steps, 1):
@@ -226,27 +241,27 @@ with tab_setup:
         """, unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("### Download Your Config File")
-    st.caption("This file contains your preferences and encrypted Naukri credentials. Keep it safe — treat it like a password.")
+    st.markdown("### Download Installer Package")
+    st.caption("Everything pre-configured for you. Just unzip, run the installer as Admin, and you're live.")
 
-    prefs   = store.load_apply_prefs()
-    naukri_creds = profile.get("naukri_creds", {})
-
+    prefs        = store.load_apply_prefs()
     config_data = {
-        "user_email":            email,
-        "naukri_email":          profile.get("naukri_email", ""),
-        "naukri_pass_enc":       naukri_creds.get("pass_enc", ""),
-        "fernet_key":            naukri_creds.get("fernet_key", ""),
-        "anthropic_key":         "",
-        "make_webhook_url":      "",
-        "notif_pref":            profile.get("notif_pref", "email"),
-        "notification_contact":  profile.get("notification_contact", ""),
-        "preferred_locations":   prefs.get("locations", ["Pune"]),
-        "salary_min":            prefs.get("salary_min", 0),
-        "max_jobs_per_run":      prefs.get("max_jobs", 5),
-        "exp_min":               prefs.get("exp_min", 3),
-        "avoid_domains":         prefs.get("avoid_domains", []),
-        "alt_titles":            prefs.get("alt_titles", []),
+        "user_email":           email,
+        "naukri_email":         profile.get("naukri_email", ""),
+        "naukri_pass_enc":      profile.get("naukri_pass_enc", ""),
+        "fernet_key":           _get_fernet_key(),
+        "anthropic_key":        ANTHROPIC_API_KEY,
+        "headless":             True,
+        "careeros_sync_url":    _get_sync_url(),
+        "make_webhook_url":     "",
+        "notif_pref":           profile.get("notif_pref", "ntfy"),
+        "notification_contact": profile.get("ntfy_topic", ""),
+        "preferred_locations":  prefs.get("locations", ["Pune"]),
+        "salary_min":           prefs.get("salary_min", 0),
+        "max_jobs_per_run":     prefs.get("max_jobs", 5),
+        "exp_min":              prefs.get("exp_min", 3),
+        "avoid_domains":        prefs.get("avoid_domains", []),
+        "alt_titles":           prefs.get("alt_titles", []),
         "resume_data": {
             "target_title":  resume_data.get("target_title", ""),
             "domain_family": resume_saved.get("domain_family", "enterprise_IT"),
@@ -257,57 +272,85 @@ with tab_setup:
         },
     }
 
-    config_json = json.dumps(config_data, indent=2, ensure_ascii=False)
+    # ── Build ZIP in memory ───────────────────────────────────────────────────
+    job_applier_dir = Path(__file__).parent.parent / "job_applier"
 
-    st.warning("⚠️ Add your **Anthropic API key** to the downloaded file before running — the `anthropic_key` field.")
+    install_readme = """CareerOS Local Runner — Quick Install
+=======================================
+
+INSTALL AS WINDOWS SERVICE (runs on boot, no login needed):
+  1. Open PowerShell as Administrator
+     (Right-click the Start menu → Windows PowerShell (Admin))
+  2. Navigate to this folder:
+     cd "C:\\CareerOS"   (or wherever you unzipped)
+  3. Run:
+     .\\install_service.ps1
+  4. Done. The service starts automatically on every boot.
+
+VERIFY IT'S RUNNING:
+  Get-Service CareerOSWatcher
+
+STOP / UNINSTALL:
+  Stop-Service CareerOSWatcher
+  .\\install_service.ps1 -Uninstall
+
+MANUAL TRIGGER (runs immediately):
+  Create an empty file named  trigger.txt  in this folder.
+  The watcher picks it up within 60 seconds.
+
+SCHEDULED TIMES: 9:30 AM and 2:00 PM daily.
+
+LOGS: logs\\service.log
+"""
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("careeros_config.json",
+                    json.dumps(config_data, indent=2, ensure_ascii=False))
+        zf.writestr("INSTALL.txt", install_readme)
+
+        for fname in ["watcher.py", "run.py", "install_service.ps1",
+                      "start_watcher.bat", "requirements.txt"]:
+            fpath = job_applier_dir / fname
+            if fpath.exists():
+                zf.write(fpath, fname)
+
+        # Ensure logs directory exists inside ZIP
+        zf.writestr("logs/.gitkeep", "")
+
+    zip_buffer.seek(0)
+
+    st.info("Everything is pre-configured. Just unzip, run `install_service.ps1` as Admin, and CareerOS starts working automatically.")
 
     st.download_button(
-        label="⬇️ Download careeros_config.json",
-        data=config_json,
-        file_name="careeros_config.json",
-        mime="application/json",
+        label="⬇️ Download CareerOS Installer (ZIP)",
+        data=zip_buffer.getvalue(),
+        file_name="careeros_installer.zip",
+        mime="application/zip",
         use_container_width=True,
         type="primary",
     )
 
     st.divider()
-    st.markdown("### Make It Always-On (Windows Service)")
-    st.caption("Run this once — the watcher becomes a Windows Service that starts on boot and runs even when you're logged off.")
+    st.markdown("### Service Management")
+    st.caption("After installing the service, use these commands to manage it.")
 
-    with st.expander("View Windows Service install commands"):
-        st.code("""# Open PowerShell as Administrator and run:
-# (Right-click PowerShell → "Run as Administrator")
+    with st.expander("PowerShell commands"):
+        st.code("""# Check status
+Get-Service CareerOSWatcher
 
-cd "path\\to\\careeros\\job_applier"
-.\\install_service.ps1
+# Stop the service
+Stop-Service CareerOSWatcher
 
-# After install:
-Get-Service CareerOSWatcher          # check status
-Stop-Service CareerOSWatcher         # stop if needed
-.\\install_service.ps1 -Uninstall    # remove service
+# Restart
+Restart-Service CareerOSWatcher
+
+# View logs
+notepad logs\\service.log
+
+# Uninstall completely
+.\\install_service.ps1 -Uninstall
 """, language="powershell")
-        st.info("The script downloads NSSM automatically and sets up the service. No manual downloads needed.")
-
-    st.divider()
-    st.markdown("### Scheduling (Windows Task Scheduler — alternative)")
-    st.caption("Set this up once — then forget it. The watcher runs twice daily automatically.")
-
-    with st.expander("View Task Scheduler setup commands"):
-        st.code("""# Open Command Prompt as Administrator and run:
-
-schtasks /create /tn "CareerOS Watcher" ^
-  /tr "pythonw D:\\path\\to\\careeros\\job_applier\\watcher.py" ^
-  /sc onlogon /ru %USERNAME% /f
-
-# This starts the watcher automatically on PC login.
-# The watcher itself handles 9:30 AM and 2:00 PM scheduling internally.
-
-# To check it's running:
-tasklist | findstr python
-
-# To stop it:
-schtasks /end /tn "CareerOS Watcher"
-""", language="bat")
 
 
 # =============================================================================

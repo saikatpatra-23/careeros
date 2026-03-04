@@ -32,6 +32,61 @@ def _ntfy(topic: str, title: str, message: str, priority: str = "default",
     except Exception:
         pass
 
+def _sync_results(email: str, results: dict, sync_url: str = "") -> None:
+    """
+    Push run results to CareerOS web app.
+    Two modes:
+      1. sync_url set  → POST to web app API endpoint (cloud deployment)
+      2. sync_url empty → try writing to local UserStore (dev / same-machine mode)
+    """
+    # ── Mode 1: Cloud sync via GET + base64 payload ───────────────────────────
+    # sync_url should be: https://app.streamlit.app/api_ingest?token=SECRET&data=
+    # We append base64-encoded JSON payload to the URL.
+    if sync_url:
+        try:
+            import base64 as _b64
+            payload  = json.dumps({"email": email, "results": results}, ensure_ascii=False)
+            encoded  = _b64.b64encode(payload.encode("utf-8")).decode("ascii")
+            full_url = sync_url.rstrip("=").rstrip("&data") + "&data=" + encoded
+            resp     = requests.get(full_url, timeout=15)
+            if resp.status_code == 200:
+                log.info("Results synced to CareerOS cloud.")
+            else:
+                log.warning(f"Cloud sync returned {resp.status_code}")
+        except Exception as e:
+            log.warning(f"Cloud sync failed (non-fatal): {e}")
+        return
+
+    # ── Mode 2: Same-machine local sync ───────────────────────────────────────
+    # Only works when web app and runner are on the same PC.
+    # Tries common paths: same folder, one level up, two levels up.
+    user_id = hashlib.md5(email.lower().encode()).hexdigest()[:12]
+    base    = Path(__file__).parent
+    candidates = [
+        base.parent.parent / "data" / "users" / user_id,   # careeros project layout
+        base.parent / "data" / "users" / user_id,           # one level up
+        base / "data" / "users" / user_id,                  # same folder
+    ]
+    data_dir = next((p for p in candidates if p.parent.parent.exists()), candidates[0])
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        hist_file = data_dir / "apply_history.json"
+        history   = json.loads(hist_file.read_text(encoding="utf-8")) if hist_file.exists() else []
+        history.insert(0, results)
+        hist_file.write_text(json.dumps(history[:30], indent=2, ensure_ascii=False), encoding="utf-8")
+
+        inv_file = data_dir / "hr_invites.json"
+        invites  = json.loads(inv_file.read_text(encoding="utf-8")) if inv_file.exists() else []
+        for inv in results.get("hr_invites", []):
+            invites.insert(0, inv)
+        inv_file.write_text(json.dumps(invites[:50], indent=2, ensure_ascii=False), encoding="utf-8")
+
+        log.info(f"Results synced locally → {data_dir}")
+    except Exception as e:
+        log.warning(f"Local sync failed (non-fatal): {e}")
+
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 CONFIG_FILE = Path(__file__).parent / "config.json"
 LOG_FILE    = Path(__file__).parent / "logs" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
@@ -124,8 +179,9 @@ async def main():
 
     # ── Browser ────────────────────────────────────────────────────────────────
     async with async_playwright() as pw:
+        headless = inp.get("headless", True)  # True = service/scheduled mode, False = debug
         browser = await pw.chromium.launch(
-            headless=False,   # visible so you can see what's happening
+            headless=headless,
             args=["--disable-blink-features=AutomationControlled"],
         )
         context = await browser.new_context(
@@ -219,10 +275,17 @@ async def main():
 
         await asyncio.sleep(random.uniform(2, 4))
 
-    # ── Save results ───────────────────────────────────────────────────────────
+    # ── Save results locally ────────────────────────────────────────────────────
     results_file = Path(__file__).parent / "logs" / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
+
+    # ── Sync results to web app (cloud or local) ─────────────────────────────────
+    _sync_results(
+        email    = inp.get("user_email", naukri_email),
+        results  = results,
+        sync_url = inp.get("careeros_sync_url", ""),
+    )
 
     log.info(
         f"Done — HR invites: {results['hr_invites_found']} found, "
@@ -246,49 +309,29 @@ async def main():
 # ── Login ──────────────────────────────────────────────────────────────────────
 async def _login_naukri(page, email: str, password: str, results: dict) -> bool:
     try:
-        log.info("Opening Naukri...")
-        await page.goto("https://www.naukri.com/", wait_until="domcontentloaded", timeout=30000)
+        log.info("Opening Naukri login page...")
+        await page.goto("https://www.naukri.com/nlogin/login",
+                        wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(random.randint(2000, 3000))
 
-        log.info("Clicking login...")
-        for sel in ["a[href*='login']", ".nI-gNb-bar__login", "#login_Layer",
-                    "a:has-text('Login')", ".login-txt"]:
-            try:
-                await page.click(sel, timeout=3000)
-                await page.wait_for_timeout(1500)
-                log.info(f"Login clicked via: {sel}")
-                break
-            except Exception:
-                continue
-
-        log.info("Filling credentials...")
-        for sel in ["input[placeholder*='Email']", "input[placeholder*='email']",
-                    "input[name='username']", "input[type='text']"]:
-            try:
-                await page.fill(sel, email, timeout=3000)
-                break
-            except Exception:
-                continue
-
-        await page.wait_for_timeout(random.randint(500, 900))
-        await page.fill("input[type='password']", password)
+        log.info("Filling email...")
+        await page.fill("#usernameField", email, timeout=10000)
         await page.wait_for_timeout(random.randint(400, 700))
 
-        for sel in ["button[type='submit']", ".loginButton", "button:has-text('Login')"]:
-            try:
-                await page.click(sel, timeout=3000)
-                break
-            except Exception:
-                continue
+        log.info("Filling password...")
+        await page.fill("#passwordField", password, timeout=5000)
+        await page.wait_for_timeout(random.randint(400, 700))
 
+        log.info("Clicking Login...")
+        await page.click("button:has-text('Login')", timeout=5000)
         await page.wait_for_load_state("networkidle", timeout=20000)
         await page.wait_for_timeout(2000)
 
-        if "login" not in page.url.lower():
-            log.info("✅ Login successful")
+        if "nlogin" not in page.url.lower():
+            log.info(f"✅ Login successful — {page.url}")
             return True
         else:
-            log.error(f"Login failed — URL: {page.url}")
+            log.error(f"Login failed — still on login page: {page.url}")
             results["errors"].append(f"Login failed — URL: {page.url}")
             return False
 
@@ -304,19 +347,19 @@ async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
     try:
         log.info(f"Navigating to search URL...")
         await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(random.randint(2000, 3000))
+        await page.wait_for_timeout(random.randint(4000, 5000))  # SPA needs extra render time
 
         cards = await page.query_selector_all(
-            "article.jobTuple, div.jobTuple, div.srp-jobtuple-wrapper, "
-            "div[class*='job-container'], div[class*='jobTuple']"
+            "div.srp-jobtuple-wrapper, div.cust-job-tuple, "
+            "article.jobTuple, div.jobTuple, div[data-job-id]"
         )
         log.info(f"Found {len(cards)} job cards")
 
         for card in cards[:25]:
             try:
-                title_el   = await card.query_selector("a.title, a[class*='jobTitle'], a[class*='title']")
-                company_el = await card.query_selector("a.subTitle, a[class*='comp'], span[class*='comp'], a[class*='company']")
-                desc_el    = await card.query_selector("ul.tags-gt, div[class*='desc'], div[class*='job-desc']")
+                title_el   = await card.query_selector("a.title, a[class*='title']")
+                company_el = await card.query_selector("a.comp-name, a[class*='comp-name']")
+                desc_el    = await card.query_selector("span.job-desc, ul.tags-gt, div[class*='desc']")
                 apply_el   = await card.query_selector("button[class*='apply'], a[class*='apply']")
 
                 title   = (await title_el.inner_text()).strip()   if title_el   else ""
@@ -325,6 +368,13 @@ async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
                 url     = await title_el.get_attribute("href")    if title_el   else ""
 
                 if not title:
+                    continue
+
+                # Clean company name — strip ratings, reviews, newlines
+                company = company.split("\n")[0].strip()
+
+                # Deduplicate by (title, company)
+                if any(j["title"] == title and j["company"] == company for j in jobs):
                     continue
 
                 apply_text    = (await apply_el.inner_text()).lower() if apply_el else ""

@@ -5,6 +5,10 @@
 # User data — stays on server
 data/
 
+# Local runner config — each user generates their own from the web app
+job_applier/config.json
+job_applier/logs/
+
 # Python
 __pycache__/
 *.pyc
