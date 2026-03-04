@@ -77,15 +77,18 @@ async def main():
     notif_contact = inp.get("notification_contact", "")
 
     results = {
-        "date":         datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "user_email":   inp.get("user_email", naukri_email),
-        "jobs_found":   0,
-        "jobs_matched": 0,
-        "jobs_applied": 0,
-        "jobs_skipped": 0,
-        "applied_list": [],
-        "skipped_list": [],
-        "errors":       [],
+        "date":              datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "user_email":        inp.get("user_email", naukri_email),
+        "jobs_found":        0,
+        "jobs_matched":      0,
+        "jobs_applied":      0,
+        "jobs_skipped":      0,
+        "applied_list":      [],
+        "skipped_list":      [],
+        "hr_invites_found":  0,
+        "hr_invites_applied": 0,
+        "hr_invites":        [],
+        "errors":            [],
     }
 
     # ── Search URL ─────────────────────────────────────────────────────────────
@@ -124,13 +127,51 @@ async def main():
 
         logged_in = await _login_naukri(page, naukri_email, naukri_password, results)
 
-        jobs = []
+        jobs        = []
+        hr_invites  = []
         if logged_in:
+            # ── P1: Check recruiter inbox FIRST (highest priority) ─────────
+            log.info("Checking Naukri recruiter inbox...")
+            hr_invites = await _scrape_recruiter_inbox(page, results)
+            results["hr_invites_found"] = len(hr_invites)
+            if hr_invites:
+                log.info(f"Found {len(hr_invites)} HR invite(s) — processing as P1")
+
+            # ── P2: Regular job search ─────────────────────────────────────
             jobs = await _scrape_job_listings(page, search_url, results)
             results["jobs_found"] = len(jobs)
             log.info(f"Found {len(jobs)} jobs")
 
         await browser.close()
+
+    # ── Process HR invites (P1 — always process, no cap) ─────────────────────
+    for invite in hr_invites:
+        matched, reason = _domain_match(ai_client, invite, resume_data, domain_family)
+        invite_record = {
+            "title":   invite.get("title"),
+            "company": invite.get("company"),
+            "url":     invite.get("url"),
+            "hr_name": invite.get("hr_name", ""),
+            "reason":  reason,
+            "applied": False,
+        }
+
+        if matched:
+            tailored = _tailor_resume(ai_client, invite, resume_data)
+            applied  = await _apply_job(invite, tailored, make_webhook, notif_contact, notif_pref,
+                                        is_hr_invite=True)
+            invite_record["applied"] = applied
+            if applied:
+                results["hr_invites_applied"] += 1
+                log.info(f"HR-INVITE APPLY  {invite.get('title')} @ {invite.get('company')}")
+            # Notify immediately (HR invite = P1 = instant notification)
+            if make_webhook:
+                _notify_hr_invite(make_webhook, invite, applied, notif_contact, notif_pref)
+        else:
+            log.info(f"HR-INVITE SKIP  {invite.get('title')} @ {invite.get('company')} — {reason}")
+
+        results["hr_invites"].append(invite_record)
+        await asyncio.sleep(random.uniform(2, 4))
 
     # ── Process jobs ───────────────────────────────────────────────────────────
     for job in jobs:
@@ -148,7 +189,8 @@ async def main():
 
         results["jobs_matched"] += 1
         tailored = _tailor_resume(ai_client, job, resume_data)
-        applied  = await _apply_job(job, tailored, make_webhook, notif_contact, notif_pref)
+        applied  = await _apply_job(job, tailored, make_webhook, notif_contact, notif_pref,
+                                    is_hr_invite=False)
 
         if applied:
             results["jobs_applied"] += 1
@@ -166,8 +208,10 @@ async def main():
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     log.info(
-        f"Done — {results['jobs_found']} found | "
-        f"{results['jobs_matched']} matched | "
+        f"Done — HR invites: {results['hr_invites_found']} found, "
+        f"{results['hr_invites_applied']} applied | "
+        f"Jobs: {results['jobs_found']} found, "
+        f"{results['jobs_matched']} matched, "
         f"{results['jobs_applied']} applied"
     )
 
@@ -370,17 +414,119 @@ Reply ONLY JSON: {{"tailored_summary": "...", "tailored_keywords": ["kw1",...]}}
         return resume_data
 
 
+# ── Recruiter inbox scraper ────────────────────────────────────────────────────
+async def _scrape_recruiter_inbox(page, results: dict) -> list:
+    """
+    Scrape Naukri's recruiter activities / messages section for HR invites.
+    Returns list of invite dicts (same shape as job listings).
+    """
+    invites = []
+    inbox_urls = [
+        "https://www.naukri.com/mnjuser/notification",
+        "https://www.naukri.com/mnjuser/myapps",
+    ]
+
+    for url in inbox_urls:
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(random.randint(1500, 2500))
+
+            # Look for recruiter activity cards
+            selectors = [
+                "div[class*='recruiterActivity']",
+                "div[class*='notification-item']",
+                "li[class*='invite']",
+                "div[class*='jobInvite']",
+                "div[class*='recInvite']",
+            ]
+
+            cards = []
+            for sel in selectors:
+                cards = await page.query_selector_all(sel)
+                if cards:
+                    log.info(f"Found {len(cards)} recruiter activity cards via: {sel}")
+                    break
+
+            for card in cards[:10]:
+                try:
+                    title_el   = await card.query_selector("a[class*='title'], a[class*='job'], h3, h4")
+                    company_el = await card.query_selector("span[class*='comp'], a[class*='comp'], span[class*='org']")
+                    hr_el      = await card.query_selector("span[class*='recruiter'], span[class*='hr'], span[class*='sender']")
+                    link_el    = await card.query_selector("a[href*='naukri.com'], a[class*='apply']")
+
+                    title   = (await title_el.inner_text()).strip()   if title_el   else ""
+                    company = (await company_el.inner_text()).strip() if company_el else ""
+                    hr_name = (await hr_el.inner_text()).strip()      if hr_el      else ""
+                    url_val = await link_el.get_attribute("href")     if link_el    else ""
+
+                    if not title and not company:
+                        continue
+
+                    invites.append({
+                        "title":        title or "Role from Recruiter",
+                        "company":      company,
+                        "hr_name":      hr_name,
+                        "description":  "",
+                        "url":          url_val or url,
+                        "is_easy_apply": True,
+                        "source":       "hr_invite",
+                        "age_days":     0,  # Fresh — HR just contacted
+                    })
+                    log.info(f"  HR Invite: {title} @ {company}")
+                except Exception:
+                    continue
+
+            if invites:
+                break  # Found invites — no need to check other URLs
+
+        except Exception as e:
+            log.warning(f"Recruiter inbox check failed for {url}: {e}")
+            results["errors"].append(f"Recruiter inbox error: {str(e)[:150]}")
+
+    return invites
+
+
+# ── HR invite instant notification ────────────────────────────────────────────
+def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool, contact: str, notif_pref: str):
+    """Fire an instant Make.com notification when an HR invite is processed."""
+    try:
+        status = "auto-applied ✅" if applied else "reviewed — not a match"
+        requests.post(make_webhook, json={
+            "type":       "hr_invite_processed",
+            "notif_pref": notif_pref,
+            "contact":    contact,
+            "message": (
+                f"🔥 HR Invite — {invite.get('company', '')}\n"
+                f"Role: {invite.get('title', '')}\n"
+                f"HR: {invite.get('hr_name', 'Unknown')}\n"
+                f"Status: CareerOS {status}"
+            ),
+            "invite": {
+                "title":   invite.get("title"),
+                "company": invite.get("company"),
+                "hr_name": invite.get("hr_name"),
+                "url":     invite.get("url"),
+                "applied": applied,
+            },
+        }, timeout=5)
+    except Exception as e:
+        log.warning(f"HR invite notification failed: {e}")
+
+
 # ── Apply ──────────────────────────────────────────────────────────────────────
-async def _apply_job(job, resume_data, make_webhook, notif_contact, notif_pref):
+async def _apply_job(job, resume_data, make_webhook, notif_contact, notif_pref,
+                     is_hr_invite: bool = False):
     try:
         if make_webhook:
             requests.post(make_webhook, json={
-                "type":       "easy_apply" if job.get("is_easy_apply") else "company_portal",
-                "job_title":  job.get("title"),
-                "company":    job.get("company"),
-                "job_url":    job.get("url"),
-                "contact":    notif_contact,
-                "notif_pref": notif_pref,
+                "type":         "hr_invite_apply" if is_hr_invite else (
+                                "easy_apply" if job.get("is_easy_apply") else "company_portal"),
+                "job_title":    job.get("title"),
+                "company":      job.get("company"),
+                "job_url":      job.get("url"),
+                "contact":      notif_contact,
+                "notif_pref":   notif_pref,
+                "is_hr_invite": is_hr_invite,
             }, timeout=5)
         return True
     except Exception:

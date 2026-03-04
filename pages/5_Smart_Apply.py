@@ -92,8 +92,8 @@ if not resume_data:
     st.stop()
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
-tab_prefs, tab_setup, tab_history = st.tabs([
-    "⚙️ Job Preferences", "🚀 Setup & Run", "📊 Run History"
+tab_prefs, tab_setup, tab_history, tab_inbox = st.tabs([
+    "⚙️ Job Preferences", "🚀 Setup & Run", "📊 Run History", "📬 Recruiter Inbox"
 ])
 
 # =============================================================================
@@ -271,7 +271,25 @@ with tab_setup:
     )
 
     st.divider()
-    st.markdown("### Scheduling (Windows Task Scheduler)")
+    st.markdown("### Make It Always-On (Windows Service)")
+    st.caption("Run this once — the watcher becomes a Windows Service that starts on boot and runs even when you're logged off.")
+
+    with st.expander("View Windows Service install commands"):
+        st.code("""# Open PowerShell as Administrator and run:
+# (Right-click PowerShell → "Run as Administrator")
+
+cd "path\\to\\careeros\\job_applier"
+.\\install_service.ps1
+
+# After install:
+Get-Service CareerOSWatcher          # check status
+Stop-Service CareerOSWatcher         # stop if needed
+.\\install_service.ps1 -Uninstall    # remove service
+""", language="powershell")
+        st.info("The script downloads NSSM automatically and sets up the service. No manual downloads needed.")
+
+    st.divider()
+    st.markdown("### Scheduling (Windows Task Scheduler — alternative)")
     st.caption("Set this up once — then forget it. The watcher runs twice daily automatically.")
 
     with st.expander("View Task Scheduler setup commands"):
@@ -356,8 +374,134 @@ with tab_history:
                     if len(skipped_list) > 10:
                         st.caption(f"...and {len(skipped_list) - 10} more")
 
+                # HR invites processed in this run
+                hr_invites = run.get("hr_invites", [])
+                if hr_invites:
+                    st.markdown("**🔥 HR Invites Processed:**")
+                    for inv in hr_invites:
+                        status = "✅ Applied" if inv.get("applied") else "⏭️ Skipped"
+                        st.markdown(
+                            f"- {status} — **{inv.get('title')} @ {inv.get('company')}**"
+                            + (f" (HR: {inv.get('hr_name')})" if inv.get("hr_name") else "")
+                        )
+
                 errors = run.get("errors", [])
                 if errors:
                     st.markdown("**⚠️ Errors:**")
                     for e in errors:
                         st.caption(e)
+
+
+# =============================================================================
+# TAB 4 — RECRUITER INBOX
+# =============================================================================
+with tab_inbox:
+    st.markdown("### Recruiter Inbox")
+    st.caption(
+        "HR invites detected by CareerOS — from Gmail monitor (real-time) "
+        "and from Naukri inbox check (on every scheduled run)."
+    )
+
+    st.markdown("""
+    <div class="warning-box">
+        🔥 <strong>Why this tab matters:</strong> An HR invite has 10x higher callback rate than
+        a cold application. CareerOS detects these automatically and applies on your behalf
+        within minutes — before the HR moves on.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Gmail Monitor setup card
+    with st.expander("📧 Set Up Gmail Monitor (one-time, 2 minutes)", expanded=False):
+        st.markdown("""
+        The Gmail Monitor runs 24/7 on **Google's own servers** — no laptop needed.
+        It detects Naukri HR invites and profile views the moment they hit your inbox.
+
+        **Steps:**
+        1. Open [script.google.com](https://script.google.com) in your browser
+        2. Click **New project** → paste the script from the Setup tab below
+        3. Set your `MAKE_WEBHOOK_URL` at the top of the script (from your config file)
+        4. Click **Run → setupTrigger()** → authorize when prompted
+        5. Done. It runs every 5 minutes forever.
+        """)
+        st.code(
+            "// Find this file in your careeros download:\n"
+            "// careeros/scripts/gmail_monitor.gs\n"
+            "// Paste entire contents into Google Apps Script",
+            language="javascript"
+        )
+
+    st.divider()
+
+    # Show HR invite history
+    hr_invites = store.load_hr_invites()
+
+    # Also pull invites from run history
+    run_history = store.load_apply_history()
+    for run in run_history:
+        for inv in run.get("hr_invites", []):
+            inv["detected_at"] = run.get("date", "")
+            hr_invites.append(inv)
+
+    # Deduplicate by company + title
+    seen = set()
+    unique_invites = []
+    for inv in hr_invites:
+        key = (inv.get("company", ""), inv.get("title", ""))
+        if key not in seen:
+            seen.add(key)
+            unique_invites.append(inv)
+
+    if not unique_invites:
+        st.info("No HR invites detected yet.")
+        st.markdown("""
+        <div style="background:#F8FAFC;border-radius:12px;padding:24px;
+                    text-align:center;color:#6B7280;margin-top:16px;">
+            <div style="font-size:2.5rem;">📭</div>
+            <div style="font-size:0.95rem;font-weight:600;margin-top:12px;">Inbox empty</div>
+            <div style="font-size:0.85rem;margin-top:6px;">
+                Set up the Gmail Monitor above and keep your Naukri profile active.<br>
+                When HRs reach out, they'll appear here automatically.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Summary stats
+        total    = len(unique_invites)
+        applied  = sum(1 for i in unique_invites if i.get("applied"))
+        skipped  = total - applied
+
+        c1, c2, c3 = st.columns(3)
+        for col, num, label, color in [
+            (c1, total,   "Total Invites",   "#1E1B4B"),
+            (c2, applied, "Auto-Applied",    "#065F46"),
+            (c3, skipped, "Skipped (no fit)","#991B1B"),
+        ]:
+            col.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-num" style="color:{color};">{num}</div>
+                <div class="stat-lbl">{label}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        for inv in unique_invites:
+            applied_flag = inv.get("applied", False)
+            status_pill  = (
+                '<span class="applied-pill">✅ Applied</span>'
+                if applied_flag else
+                '<span class="skipped-pill">⏭️ Skipped</span>'
+            )
+            url  = inv.get("url", "")
+            link = f"[{inv.get('title','Role')} @ {inv.get('company','')}]({url})" if url else f"{inv.get('title','Role')} @ {inv.get('company','')}"
+            date = inv.get("detected_at", "")
+
+            with st.expander(f"{'🔥' if applied_flag else '👀'} {inv.get('company','Unknown')} — {inv.get('title','Unknown role')}"):
+                st.markdown(status_pill, unsafe_allow_html=True)
+                if inv.get("hr_name"):
+                    st.markdown(f"**HR:** {inv.get('hr_name')}")
+                st.markdown(f"**Job:** {link}")
+                if date:
+                    st.caption(f"Detected: {date}")
+                if inv.get("reason"):
+                    st.caption(f"CareerOS reasoning: {inv.get('reason')}")

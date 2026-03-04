@@ -95,6 +95,14 @@ class UserStore:
     def load_cover_letters(self) -> list:
         return self.load("cover_letters.json", [])
 
+    def save_hr_invite(self, invite: dict) -> None:
+        history = self.load("hr_invites.json", [])
+        history.insert(0, invite)
+        self.save("hr_invites.json", history[:50])  # keep last 50
+
+    def load_hr_invites(self) -> list:
+        return self.load("hr_invites.json", [])
+
     # ── Summary for dashboard ─────────────────────────────────────────────────
 
     def summary(self) -> dict:
