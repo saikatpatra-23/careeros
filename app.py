@@ -151,7 +151,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ── Steps ─────────────────────────────────────────────────────────────────────
 st.markdown("### Your Career Toolkit")
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 
 with c1:
     has_resume = summary["has_resume"]
@@ -199,14 +199,35 @@ with c2:
         st.info("Complete Resume Builder first.")
 
 with c3:
+    has_ats = has_resume
+    badge3  = "Ready" if has_ats else "🔒 Locked"
+    st.markdown(f"""
+    <div class="step-card">
+        <span class="step-badge {'done' if has_ats else ''}">{badge3}</span>
+        <div class="step-title">🎯 ATS Score Checker</div>
+        <div class="step-body">
+            Paste any job description — CareerOS tells you your match score,
+            missing keywords, and exactly what to fix before you apply.<br><br>
+            {'Check any job in 10 seconds.' if has_ats else 'Build your resume first to unlock.'}
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:{'100' if has_ats else '0'}%"></div></div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    if has_ats:
+        st.page_link("pages/4_ATS_Checker.py", label="Check Any Job →", icon="🎯")
+    else:
+        st.info("Complete Resume Builder first.")
+
+with c4:
     st.markdown(f"""
     <div class="step-card">
         <span class="step-badge">Coming Soon</span>
-        <div class="step-title">🎯 Smart Job Apply</div>
+        <div class="step-title">🤖 Smart Job Apply</div>
         <div class="step-body">
-            Domain-aware job matching — CareerOS will only apply to jobs that match
-            your actual background. No spray-and-pray. No domain mismatches.<br><br>
-            <em>Phase 2 — launching next.</em>
+            CareerOS applies to matched jobs automatically — Claude reads every JD,
+            scores it against your profile, and only applies where it makes sense.<br><br>
+            <em>Launching next.</em>
         </div>
         <div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div>
     </div>
