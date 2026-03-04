@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email
+from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 from config import ANTHROPIC_API_KEY, _get_secret
 from pathlib import Path
@@ -64,6 +65,7 @@ def _load_hr_invites(email: str, store: UserStore) -> list:
 
 st.set_page_config(page_title="Smart Apply – CareerOS", page_icon="🤖", layout="wide")
 require_login()
+inject_global_css()
 
 email = get_user_email()
 store = UserStore(email)

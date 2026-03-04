@@ -10,10 +10,16 @@ import streamlit as st
 from auth import require_login, get_user_email
 from persistence.store import UserStore
 from modules.ats.checker import check_ats
+from modules.resume.parser import (
+    extract_text_from_docx, extract_text_from_pdf,
+    extract_text_from_image, parse_resume_to_json,
+)
+from modules.ui.styles import inject_global_css
 from config import ANTHROPIC_API_KEY
 
 st.set_page_config(page_title="ATS Checker – CareerOS", page_icon="🎯", layout="wide")
 require_login()
+inject_global_css()
 
 email = get_user_email()
 store = UserStore(email)
@@ -86,13 +92,73 @@ st.markdown("""
 resume_saved = store.load_resume()
 resume_data  = resume_saved.get("structured_data", {})
 
-if not resume_data:
-    st.warning("No resume found. Build your resume first to use the ATS Checker.")
+if "ats_uploaded_resume" not in st.session_state:
+    st.session_state.ats_uploaded_resume = None
+
+if not resume_data and not st.session_state.ats_uploaded_resume:
+    st.warning("No resume found. Build your resume first — or upload one below for a one-time check.")
     st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder →", icon="📄")
+
+    st.markdown("#### Upload your resume for a one-time check")
+    st.caption("This won't overwrite your saved resume — it's only used for this session.")
+    uploaded_tmp = st.file_uploader(
+        "Upload resume",
+        type=["pdf", "docx", "jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="ats_upload_init",
+    )
+    if uploaded_tmp is not None:
+        with st.spinner("Parsing resume... (15-30 seconds)"):
+            try:
+                file_bytes = uploaded_tmp.read()
+                ext = uploaded_tmp.name.rsplit(".", 1)[-1].lower()
+                if ext == "docx":
+                    text = extract_text_from_docx(file_bytes)
+                elif ext == "pdf":
+                    text = extract_text_from_pdf(file_bytes)
+                else:
+                    text = extract_text_from_image(file_bytes, ANTHROPIC_API_KEY)
+                parsed = parse_resume_to_json(text, ANTHROPIC_API_KEY)
+                st.session_state.ats_uploaded_resume = parsed
+                st.rerun()
+            except Exception as e:
+                st.error(f"Could not parse resume: {e}")
     st.stop()
 
+# Use uploaded session resume if no saved resume
+if not resume_data and st.session_state.ats_uploaded_resume:
+    resume_data = st.session_state.ats_uploaded_resume
+
 target_role = resume_data.get("target_title", "your target role")
-st.success(f"Resume loaded: **{resume_data.get('name', '')}** — targeting **{target_role}**")
+
+col_resume_info, col_upload_alt = st.columns([3, 1])
+with col_resume_info:
+    st.success(f"Resume loaded: **{resume_data.get('name', '')}** — targeting **{target_role}**")
+with col_upload_alt:
+    with st.expander("Use a different resume"):
+        uploaded_alt = st.file_uploader(
+            "Replace for this session",
+            type=["pdf", "docx", "jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+            key="ats_upload_alt",
+        )
+        if uploaded_alt is not None:
+            with st.spinner("Parsing..."):
+                try:
+                    file_bytes = uploaded_alt.read()
+                    ext = uploaded_alt.name.rsplit(".", 1)[-1].lower()
+                    if ext == "docx":
+                        text = extract_text_from_docx(file_bytes)
+                    elif ext == "pdf":
+                        text = extract_text_from_pdf(file_bytes)
+                    else:
+                        text = extract_text_from_image(file_bytes, ANTHROPIC_API_KEY)
+                    parsed = parse_resume_to_json(text, ANTHROPIC_API_KEY)
+                    st.session_state.ats_uploaded_resume = parsed
+                    resume_data = parsed
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Parse failed: {e}")
 
 st.divider()
 
@@ -275,7 +341,7 @@ if analyse and jd.strip():
         st.divider()
         st.markdown("### Optimised Naukri Headline for This Job")
         st.caption("Copy this into Naukri → Edit Profile → Resume Headline before applying.")
-        st.code(headline_suggestion, language=None)
+        st.text_area("ats_headline", value=headline_suggestion, height=80, disabled=True, label_visibility="collapsed")
 
     # ── CTA ───────────────────────────────────────────────────────────────────
     st.divider()

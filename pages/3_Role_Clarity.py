@@ -10,10 +10,12 @@ import json, re
 import streamlit as st
 import anthropic
 from auth import require_login, get_user_email
+from modules.ui.styles import inject_global_css
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 
 st.set_page_config(page_title="Role Clarity – CareerOS", page_icon="💡", layout="centered")
 require_login()
+inject_global_css()
 
 st.markdown("""
 <style>

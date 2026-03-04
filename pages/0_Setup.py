@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email, get_user_name
+from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 from config import _get_secret
 from modules.notifications.ntfy import get_topic, notify_test
@@ -17,6 +18,7 @@ from cryptography.fernet import Fernet
 
 st.set_page_config(page_title="Setup – CareerOS", page_icon="⚙️", layout="centered")
 require_login()
+inject_global_css()
 
 email = get_user_email()
 name  = get_user_name()

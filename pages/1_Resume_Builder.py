@@ -11,6 +11,12 @@ from auth import require_login, get_user_email, get_user_name
 from persistence.store import UserStore
 from modules.resume.session import ResumeBuilderSession
 from modules.resume.word_export import export_to_docx, get_filename
+from modules.resume.pdf_export import export_to_pdf, get_pdf_filename
+from modules.resume.parser import (
+    extract_text_from_docx, extract_text_from_pdf,
+    extract_text_from_image, parse_resume_to_json,
+)
+from modules.ui.styles import inject_global_css
 from config import MIN_PROBE_ROUNDS
 
 def _get_api_key() -> str:
@@ -22,6 +28,7 @@ def _get_api_key() -> str:
 
 st.set_page_config(page_title="Resume Builder – CareerOS", page_icon="📄", layout="wide")
 require_login()
+inject_global_css()
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -143,6 +150,7 @@ def _init():
         "rb_chat":      [],
         "rb_resume":    None,
         "rb_doc_bytes": None,
+        "rb_pdf_bytes": None,
         "rb_exchange":  0,
     }
     for k, v in defaults.items():
@@ -246,6 +254,42 @@ It will ask about your work, your achievements, and what makes you good at what 
         else:
             if st.button("Start Building My Resume →", type="primary", use_container_width=True):
                 _start_new_session(existing)
+
+        st.markdown("---")
+        st.markdown("#### Or upload an existing resume")
+        st.caption("We'll parse it and jump straight to the download step.")
+        uploaded = st.file_uploader(
+            "Upload resume",
+            type=["pdf", "docx", "jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+            key="rb_upload_step1",
+        )
+        if uploaded is not None:
+            with st.spinner("Parsing your resume... (15-30 seconds)"):
+                try:
+                    file_bytes = uploaded.read()
+                    ext = uploaded.name.rsplit(".", 1)[-1].lower()
+                    if ext == "docx":
+                        text = extract_text_from_docx(file_bytes)
+                    elif ext == "pdf":
+                        text = extract_text_from_pdf(file_bytes)
+                    else:
+                        text = extract_text_from_image(file_bytes, _get_api_key())
+                    parsed = parse_resume_to_json(text, _get_api_key())
+                    store.save_resume({
+                        "version":         1,
+                        "structured_data": parsed,
+                        "target_role":     parsed.get("target_title", ""),
+                        "domain_family":   parsed.get("domain_family", ""),
+                        "ats_keywords":    parsed.get("ats_keywords", []),
+                        "role_suggestion": parsed.get("role_suggestion", {}),
+                        "created_at":      __import__("datetime").datetime.now().isoformat(),
+                    })
+                    st.session_state.rb_resume = parsed
+                    st.session_state.rb_step   = 3
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not parse resume: {e}")
 
     with col_how:
         st.markdown("### What makes CareerOS different")
@@ -360,7 +404,7 @@ if st.session_state.rb_step == 2:
 
     with restart_col:
         if st.button("Start Over", use_container_width=True):
-            for k in ["rb_step", "rb_session", "rb_chat", "rb_resume", "rb_doc_bytes", "rb_exchange"]:
+            for k in ["rb_step", "rb_session", "rb_chat", "rb_resume", "rb_doc_bytes", "rb_pdf_bytes", "rb_exchange"]:
                 st.session_state.pop(k, None)
             _init()
             st.rerun()
@@ -442,25 +486,42 @@ if st.session_state.rb_step == 3:
 
     # Download
     st.divider()
-    dl_col, back_col = st.columns([2, 1])
-    with dl_col:
-        if st.button("📄 Build Word Document (.docx)", type="primary", use_container_width=True):
-            with st.spinner("Building ATS-friendly Word resume..."):
+    word_col, pdf_col, back_col = st.columns([2, 2, 1])
+
+    with word_col:
+        if st.button("📄 Build Word (.docx)", type="primary", use_container_width=True):
+            with st.spinner("Building Word resume..."):
                 try:
-                    doc_bytes = export_to_docx(resume_data)
-                    st.session_state.rb_doc_bytes = doc_bytes
+                    st.session_state.rb_doc_bytes = export_to_docx(resume_data)
                 except Exception as e:
                     st.error(f"Export failed: {e}")
-
         if st.session_state.rb_doc_bytes:
             st.download_button(
-                label="⬇️ Download Resume (.docx)",
+                label="⬇️ Download Word (.docx)",
                 data=st.session_state.rb_doc_bytes,
                 file_name=get_filename(resume_data),
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True,
             )
-            st.success("Resume ready! Upload directly to Naukri or attach to job applications.")
+
+    with pdf_col:
+        if st.button("📑 Build PDF (.pdf)", use_container_width=True):
+            with st.spinner("Building PDF resume..."):
+                try:
+                    st.session_state.rb_pdf_bytes = export_to_pdf(resume_data)
+                except Exception as e:
+                    st.error(f"PDF export failed: {e}")
+        if st.session_state.rb_pdf_bytes:
+            st.download_button(
+                label="⬇️ Download PDF (.pdf)",
+                data=st.session_state.rb_pdf_bytes,
+                file_name=get_pdf_filename(resume_data),
+                mime="application/pdf",
+                use_container_width=True,
+            )
+
+    if st.session_state.rb_doc_bytes or st.session_state.rb_pdf_bytes:
+        st.success("Resume ready! Upload directly to Naukri or attach to job applications.")
 
     with back_col:
         if st.button("← Back to Chat", use_container_width=True):

@@ -9,11 +9,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import streamlit as st
 from datetime import datetime
 from auth import require_login, get_user_email
+from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 from modules.coverletter.generator import generate_cover_letter
 
 st.set_page_config(page_title="Cover Letter – CareerOS", page_icon="✉️", layout="wide")
 require_login()
+inject_global_css()
 
 email = get_user_email()
 store = UserStore(email)
