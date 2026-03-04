@@ -550,91 +550,104 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
     """
     invites = []
 
-    # Naukri pages to check for recruiter-initiated contact
-    inbox_urls = [
-        "https://www.naukri.com/mnjuser/homepage",      # power-invite-card widgets
-        "https://www.naukri.com/mnjuser/notification",  # NVites tab
-    ]
+    # ── Primary: NVites dedicated inbox page ──────────────────────────────────
+    # URL:     https://www.naukri.com/mnjuser/inbox
+    # Card:    div.card.inbox-company-card
+    # Title:   span.title  (or span.ellipsis.title)
+    # Company: span.comp-name  (may be "Hiring for X" — strip that prefix)
+    # Recruiter: span.posted-by-txt  (e.g. "Posted by I Square Tek")
+    # Date:    span.date-time-wrap
+    # Key:     data-mailid attribute (used to re-find the card for applying)
+    # Note:    Cards have no <a href> — apply by clicking card → Apply button in panel
+    try:
+        await page.goto("https://www.naukri.com/mnjuser/inbox",
+                        wait_until="domcontentloaded", timeout=20000)
+        await page.wait_for_timeout(random.randint(2500, 3500))
 
-    for inbox_url in inbox_urls:
-        try:
-            await page.goto(inbox_url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(random.randint(2500, 3500))
+        cards = await page.query_selector_all("div.card.inbox-company-card")
+        log.info(f"Recruiter inbox: {len(cards)} NVite cards at /mnjuser/inbox")
 
-            # ── Naukri "power-invite-card" (confirmed structure as of 2024) ────
-            # Card:    div.power-invite-card  (or div.rmj-card)
-            # Title:   h2.comp-name           (job title, despite the misleading class)
-            # Company: h4.rmj-title           (company / "Hiring for XYZ")
-            # Time:    h4.rmj-time            (e.g. "Invited 6d ago")
-            # URL:     click the card → navigate to job detail page
-            card_selectors = [
-                "div.power-invite-card",
-                "div.rmj-card.power-invite-card",
-                "div[class*='power-invite']",
-                "div[class*='rmj-card']",
-            ]
-            cards = []
-            for sel in card_selectors:
-                found = await page.query_selector_all(sel)
-                if found:
-                    log.info(f"Recruiter inbox: {len(found)} power-invite cards via [{sel}]")
-                    cards = found
-                    break
+        import re as _re
+        for card in cards[:10]:
+            try:
+                mail_id   = await card.get_attribute("data-mailid") or ""
+                title_el  = await card.query_selector("span.title, span.ellipsis.title")
+                comp_el   = await card.query_selector("span.comp-name")
+                recr_el   = await card.query_selector("span.posted-by-txt")
+                date_el   = await card.query_selector("span.date-time-wrap")
 
-            for card in cards[:10]:
+                title     = (await title_el.inner_text()).strip() if title_el else ""
+                company   = (await comp_el.inner_text()).strip()  if comp_el  else ""
+                recruiter = (await recr_el.inner_text()).strip()  if recr_el  else ""
+                date_str  = (await date_el.inner_text()).strip()  if date_el  else ""
+
+                # Clean "Hiring for " prefix and "Posted by " prefix
+                company   = _re.sub(r"^Hiring for\s*", "", company).strip()
+                recruiter = _re.sub(r"^Posted by\s*", "", recruiter).strip()
+
+                # Estimate age in days from date string (e.g. "4 Mar", "26 Feb")
+                age_days = 0
                 try:
-                    title_el   = await card.query_selector("h2.comp-name, h2[class*='comp'], h3, h2")
-                    company_el = await card.query_selector("h4.rmj-title, h4[class*='title'], h4")
-                    time_el    = await card.query_selector("h4.rmj-time, h4[class*='time'], span[class*='time']")
+                    from datetime import datetime as _dt
+                    parsed = _dt.strptime(f"{date_str} {_dt.now().year}", "%d %b %Y")
+                    age_days = (datetime.now() - parsed).days
+                except Exception:
+                    pass
 
-                    title   = (await title_el.inner_text()).strip()   if title_el   else ""
-                    company = (await company_el.inner_text()).strip() if company_el else ""
-                    age_str = (await time_el.inner_text()).strip()    if time_el    else ""
-
-                    # Parse age (e.g. "Invited 6d ago" → 6)
-                    import re as _re
-                    age_match = _re.search(r"(\d+)\s*d", age_str)
-                    age_days  = int(age_match.group(1)) if age_match else 0
-
-                    if not title:
-                        continue
-
-                    # Click the card to navigate to the job detail and get URL
-                    job_url = inbox_url  # fallback
-                    try:
-                        async with page.expect_navigation(timeout=8000):
-                            await card.click()
-                        job_url = page.url
-                        await page.wait_for_timeout(1000)
-                        await page.go_back()
-                        await page.wait_for_timeout(1500)
-                    except Exception:
-                        # Card click didn't navigate — check for a link inside
-                        link_el = await card.query_selector("a[href]")
-                        if link_el:
-                            job_url = await link_el.get_attribute("href") or inbox_url
-
-                    invites.append({
-                        "title":         title,
-                        "company":       company.replace("Hiring for ", "").strip() or company,
-                        "hr_name":       "",
-                        "description":   "",
-                        "url":           job_url,
-                        "is_easy_apply": True,
-                        "source":        "hr_invite",
-                        "age_days":      age_days,
-                    })
-                    log.info(f"  HR Invite: {title} @ {company} ({age_str})")
-                except Exception as e:
-                    log.warning(f"  HR invite card parse error: {e}")
+                if not title:
                     continue
 
-            if invites:
-                break
+                invites.append({
+                    "title":         title,
+                    "company":       company or recruiter,
+                    "hr_name":       recruiter,
+                    "description":   "",
+                    "url":           f"https://www.naukri.com/mnjuser/inbox#{mail_id}",
+                    "mail_id":       mail_id,
+                    "is_easy_apply": True,
+                    "source":        "hr_invite",
+                    "age_days":      age_days,
+                })
+                log.info(f"  NVite: {title} @ {company} | by {recruiter} | {date_str}")
+            except Exception as e:
+                log.warning(f"  NVite card parse error: {e}")
+                continue
 
+    except Exception as e:
+        log.warning(f"NVites inbox check failed: {e}")
+        results["errors"].append(f"NVites inbox error: {str(e)[:150]}")
+
+    # ── Fallback: homepage power-invite-card widget ────────────────────────────
+    if not invites:
+        try:
+            await page.goto("https://www.naukri.com/mnjuser/homepage",
+                            wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(random.randint(2000, 3000))
+
+            for card in await page.query_selector_all("div.power-invite-card")[:5]:
+                try:
+                    title_el = await card.query_selector("h2.comp-name, h2")
+                    comp_el  = await card.query_selector("h4.rmj-title, h4")
+                    title    = (await title_el.inner_text()).strip() if title_el else ""
+                    company  = (await comp_el.inner_text()).strip()  if comp_el  else ""
+                    if not title:
+                        continue
+                    invites.append({
+                        "title":    title,
+                        "company":  company.replace("Hiring for ", "").strip(),
+                        "hr_name":  "",
+                        "description": "",
+                        "url":      "https://www.naukri.com/mnjuser/homepage",
+                        "mail_id":  "",
+                        "is_easy_apply": True,
+                        "source":   "hr_invite",
+                        "age_days": 0,
+                    })
+                    log.info(f"  Power-invite: {title} @ {company}")
+                except Exception:
+                    continue
         except Exception as e:
-            log.warning(f"Recruiter inbox check failed for {inbox_url}: {e}")
-            results["errors"].append(f"Recruiter inbox error: {str(e)[:150]}")
+            log.warning(f"Homepage invite fallback failed: {e}")
 
     return invites
 
@@ -660,6 +673,96 @@ def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
     log.info(f"ntfy notification sent for HR invite from {invite.get('company')}")
 
 
+# ── Apply: NVites inbox flow (click card → Apply button in detail panel) ───────
+async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref):
+    """
+    Apply to a Naukri NVite by clicking the inbox card and then the Apply button
+    in the detail panel. Used when invite has no direct job URL.
+    """
+    title   = job.get("title", "Unknown")
+    company = job.get("company", "Unknown")
+    mail_id = job.get("mail_id", "")
+
+    try:
+        await page.goto("https://www.naukri.com/mnjuser/inbox",
+                        wait_until="domcontentloaded", timeout=20000)
+        await page.wait_for_timeout(random.randint(2000, 3000))
+
+        # Find the specific card by data-mailid
+        card = await page.query_selector(f"div.card.inbox-company-card[data-mailid='{mail_id}']")
+        if not card:
+            # Fallback: try first card if only one invite
+            cards = await page.query_selector_all("div.card.inbox-company-card")
+            if cards:
+                card = cards[0]
+                log.info(f"mail_id not matched, using first inbox card for {title}")
+            else:
+                log.warning(f"No inbox cards found for {title} @ {company}")
+                return False
+
+        # Click the card to open detail panel
+        await card.click()
+        await page.wait_for_timeout(random.randint(1500, 2500))
+
+        # Find Apply button in the detail panel / drawer
+        apply_selectors = [
+            "button:has-text('Apply Now')",
+            "button:has-text('Easy Apply')",
+            "button:has-text('Apply')",
+            "[class*='apply-btn']",
+            "[class*='applyBtn']",
+        ]
+        apply_btn = None
+        for sel in apply_selectors:
+            try:
+                apply_btn = await page.query_selector(sel)
+                if apply_btn:
+                    btn_text = (await apply_btn.inner_text()).strip().lower()
+                    if "applied" in btn_text:
+                        log.info(f"Already applied (inbox) — {title} @ {company}")
+                        return False
+                    break
+            except Exception:
+                continue
+
+        if not apply_btn:
+            log.warning(f"Apply button not found in inbox panel — {title} @ {company}")
+            return False
+
+        await apply_btn.click()
+        await page.wait_for_timeout(random.randint(1500, 2500))
+
+        # Handle any submit confirmation modal
+        for sel in ["button:has-text('Submit Application')", "button:has-text('Submit')"]:
+            try:
+                btn = await page.query_selector(sel)
+                if btn:
+                    await btn.click()
+                    await page.wait_for_timeout(1500)
+                    break
+            except Exception:
+                continue
+
+        log.info(f"NVite applied (inbox flow) — {title} @ {company}")
+
+        if make_webhook:
+            try:
+                requests.post(make_webhook, json={
+                    "type": "hr_invite_apply",
+                    "job_title": title, "company": company,
+                    "mail_id": mail_id, "contact": notif_contact,
+                    "notif_pref": notif_pref, "is_hr_invite": True,
+                }, timeout=5)
+            except Exception:
+                pass
+
+        return True
+
+    except Exception as e:
+        log.warning(f"Inbox apply failed for {title} @ {company}: {e}")
+        return False
+
+
 # ── Apply ──────────────────────────────────────────────────────────────────────
 async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_pref,
                      is_hr_invite: bool = False):
@@ -675,6 +778,11 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         if not url:
             log.warning(f"No URL for {title} @ {company} — skipping apply")
             return False
+
+        # ── Special flow: NVites inbox invites (no direct URL, click card first) ──
+        mail_id = job.get("mail_id", "")
+        if is_hr_invite and mail_id and "mnjuser/inbox" in url:
+            return await _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref)
 
         await page.goto(url, wait_until="domcontentloaded", timeout=25000)
         await page.wait_for_timeout(random.randint(2000, 3000))
