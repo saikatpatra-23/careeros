@@ -186,6 +186,7 @@ async def main():
     target_role   = resume_data.get("target_title", "Business Analyst")
     domain_family = resume_data.get("domain_family", "enterprise_IT")
     locations     = inp.get("preferred_locations", ["Pune"])
+    current_loc   = inp.get("current_location", locations[0] if locations else "Mumbai")
     salary_min    = inp.get("salary_min", 0)
     max_apply     = inp.get("max_jobs_per_run", 5)
 
@@ -292,7 +293,8 @@ async def main():
             if matched:
                 tailored = _tailor_resume(ai_client, invite, resume_data)
                 applied  = await _apply_job(page, invite, tailored, make_webhook,
-                                            notif_contact, notif_pref, is_hr_invite=True)
+                                            notif_contact, notif_pref, current_loc,
+                                            is_hr_invite=True)
                 invite_record["applied"] = applied
                 if applied:
                     results["hr_invites_applied"] += 1
@@ -322,7 +324,8 @@ async def main():
             results["jobs_matched"] += 1
             tailored = _tailor_resume(ai_client, job, resume_data)
             applied  = await _apply_job(page, job, tailored, make_webhook,
-                                        notif_contact, notif_pref, is_hr_invite=False)
+                                        notif_contact, notif_pref, current_loc,
+                                        is_hr_invite=False)
 
             if applied:
                 results["jobs_applied"] += 1
@@ -673,8 +676,94 @@ def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
     log.info(f"ntfy notification sent for HR invite from {invite.get('company')}")
 
 
+# ── Fill Naukri Easy Apply modal (location / CTC / notice period) ──────────────
+async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
+    """
+    After clicking Apply/Easy Apply on Naukri, a modal may appear asking for:
+    - Current location (typeahead)
+    - Notice period (dropdown)
+    - Current CTC / Expected CTC (inputs)
+
+    Fills what it can find and ignores fields that aren't present.
+    """
+    try:
+        # ── Current location typeahead ─────────────────────────────────────────
+        loc_selectors = [
+            "input[placeholder*='current city' i]",
+            "input[placeholder*='Current City' i]",
+            "input[placeholder*='current location' i]",
+            "input[id*='currentCity' i]",
+            "input[id*='currentLocation' i]",
+            "[class*='currentCity'] input",
+            "[class*='currentLocation'] input",
+            "[class*='location'] input[type='text']",
+        ]
+        loc_input = None
+        for sel in loc_selectors:
+            try:
+                loc_input = await page.query_selector(sel)
+                if loc_input and await loc_input.is_visible():
+                    break
+                loc_input = None
+            except Exception:
+                continue
+
+        if loc_input:
+            await loc_input.triple_click()
+            await loc_input.type(current_loc, delay=80)
+            await page.wait_for_timeout(1200)
+
+            # Select first suggestion from typeahead dropdown
+            suggestion_selectors = [
+                "[class*='suggestItem']",
+                "[class*='suggestion-item']",
+                "[class*='autocomplete'] li",
+                "[class*='dropdown'] li",
+                "ul.suggestions li",
+                "[role='option']",
+                "[class*='naukri'] [class*='option']",
+            ]
+            for sel in suggestion_selectors:
+                try:
+                    suggestion = await page.query_selector(sel)
+                    if suggestion and await suggestion.is_visible():
+                        await suggestion.click()
+                        log.info(f"Location set to: {current_loc}")
+                        break
+                except Exception:
+                    continue
+            else:
+                # No dropdown appeared — try pressing Enter or Tab to confirm
+                await loc_input.press("Enter")
+                log.info(f"Location typed (no dropdown): {current_loc}")
+
+            await page.wait_for_timeout(600)
+
+        # ── Notice period dropdown ──────────────────────────────────────────────
+        notice_selectors = [
+            "select[id*='notice' i]",
+            "select[name*='notice' i]",
+            "[class*='noticePeriod'] select",
+            "[class*='notice-period'] select",
+        ]
+        for sel in notice_selectors:
+            try:
+                notice_el = await page.query_selector(sel)
+                if notice_el and await notice_el.is_visible():
+                    # Select "Immediate" or "0-15 days" if available
+                    await notice_el.select_option(index=1)
+                    log.info("Notice period set")
+                    break
+            except Exception:
+                continue
+
+    except Exception as e:
+        log.debug(f"Easy Apply modal handler: {e}")
+
+
 # ── Apply: NVites inbox flow (click card → Apply button in detail panel) ───────
-async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref):
+async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref,
+                              current_loc: str = "Mumbai"):
     """
     Apply to a Naukri NVite by clicking the inbox card and then the Apply button
     in the detail panel. Used when invite has no direct job URL.
@@ -732,6 +821,10 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
         await apply_btn.click()
         await page.wait_for_timeout(random.randint(1500, 2500))
 
+        # Fill location / notice period if modal appears
+        await _handle_easy_apply_modal(page, current_loc)
+        await page.wait_for_timeout(800)
+
         # Handle any submit confirmation modal
         for sel in ["button:has-text('Submit Application')", "button:has-text('Submit')"]:
             try:
@@ -765,7 +858,7 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
 
 # ── Apply ──────────────────────────────────────────────────────────────────────
 async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_pref,
-                     is_hr_invite: bool = False):
+                     current_loc: str = "Mumbai", is_hr_invite: bool = False):
     """
     Navigate to the job URL and click Apply on Naukri (Easy Apply flow).
     Falls back gracefully if the apply button is not found or already applied.
@@ -782,7 +875,7 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         # ── Special flow: NVites inbox invites (no direct URL, click card first) ──
         mail_id = job.get("mail_id", "")
         if is_hr_invite and mail_id and "mnjuser/inbox" in url:
-            return await _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref)
+            return await _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref, current_loc)
 
         await page.goto(url, wait_until="domcontentloaded", timeout=25000)
         await page.wait_for_timeout(random.randint(2000, 3000))
@@ -820,7 +913,11 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         await apply_btn.click()
         await page.wait_for_timeout(random.randint(1500, 2500))
 
-        # ── Step 2: Handle Easy Apply modal / drawer ────────────────────────────
+        # ── Step 2: Fill Easy Apply modal fields (location, CTC, notice period) ─
+        await _handle_easy_apply_modal(page, current_loc)
+        await page.wait_for_timeout(random.randint(800, 1200))
+
+        # ── Step 3: Handle Easy Apply modal / drawer ────────────────────────────
         # Some jobs show a modal; some go directly to a confirmation page
         submit_selectors = [
             "button:has-text('Submit Application')",

@@ -293,6 +293,7 @@ with tab_setup:
         "make_webhook_url":     "",
         "notif_pref":           profile.get("notif_pref", "ntfy"),
         "notification_contact": profile.get("ntfy_topic", ""),
+        "current_location":     prefs.get("current_location", prefs.get("locations", ["Mumbai"])[0] if prefs.get("locations") else "Mumbai"),
         "preferred_locations":  prefs.get("locations", ["Pune"]),
         "salary_min":           prefs.get("salary_min", 0),
         "max_jobs_per_run":     prefs.get("max_jobs", 5),
