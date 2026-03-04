@@ -19,56 +19,26 @@ inject_global_css()
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-.page-header {
-    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-    border-radius: 14px;
-    padding: 24px 28px;
-    color: white;
-    margin-bottom: 24px;
-}
-.page-header h2 { margin: 0 0 4px 0; font-size: 1.6rem; font-weight: 700; }
-.page-header p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
-
 .result-card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px 28px;
-    border: 1.5px solid #E2E8F0;
-    border-left: 5px solid #059669;
-    margin: 16px 0;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    background: #1A1D27; border-radius: 12px;
+    padding: 20px 24px;
+    border: 1px solid rgba(16,185,129,0.25);
+    border-left: 4px solid #10B981; margin: 14px 0;
 }
 .advice-card {
-    background: #FFFBEB;
-    border-radius: 12px;
-    padding: 16px 20px;
-    border-left: 4px solid #F59E0B;
-    margin: 12px 0;
-    font-size: 0.9rem;
-    color: #78350F;
-    line-height: 1.6;
+    background: rgba(245,158,11,0.07); border-radius: 8px;
+    padding: 14px 18px; border-left: 3px solid #F59E0B;
+    margin: 10px 0; font-size: 0.875rem; color: #C49A20; line-height: 1.6;
 }
 .step-card {
-    background: white;
-    border-radius: 10px;
-    padding: 14px 18px;
-    border: 1.5px solid #E2E8F0;
-    margin: 8px 0;
-    font-size: 0.9rem;
-    color: #374151;
+    background: #1A1D27; border-radius: 8px;
+    padding: 12px 16px; border: 1px solid rgba(255,255,255,0.07);
+    margin: 6px 0; font-size: 0.875rem; color: #E2E8F0;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<div class="page-header">
-    <h2>💡 Role Clarity</h2>
-    <p>Not sure what role fits you? Answer 5 quick questions — CareerOS will tell you what role fits best and why.</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">💡</span><span class="pg-name">Role Clarity</span><span class="pg-sub">5 questions → best-fit role</span></div>', unsafe_allow_html=True)
 
 ROLE_CLARITY_PROMPT = """You are CareerOS, expert career coach for Indian job market.
 Based on 5 answers, output a JSON role recommendation with these keys:
@@ -83,9 +53,7 @@ Based on 5 answers, output a JSON role recommendation with these keys:
 }}
 Output ONLY the JSON."""
 
-st.markdown("### Tell CareerOS about yourself")
-st.markdown("*Answer honestly — there are no wrong answers. The more specific you are, the better the recommendation.*")
-st.markdown("<br>", unsafe_allow_html=True)
+st.caption("Answer honestly — the more specific, the better the recommendation.")
 
 with st.form("role_form"):
     q1 = st.text_area(

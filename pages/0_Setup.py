@@ -26,33 +26,21 @@ store = UserStore(email)
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-.setup-header {
-    background: linear-gradient(135deg, #1B4F9C 0%, #2563EB 100%);
-    border-radius: 14px; padding: 28px 32px; color: white; margin-bottom: 28px;
-}
-.setup-header h2 { margin: 0 0 6px 0; font-size: 1.6rem; font-weight: 700; }
-.setup-header p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
 .security-note {
-    background: #F0FDF4; border-radius: 10px; padding: 14px 18px;
-    border-left: 4px solid #059669; font-size: 0.85rem; color: #065F46;
-    margin: 16px 0; line-height: 1.6;
+    background: rgba(16,185,129,0.08); border-radius: 8px; padding: 12px 16px;
+    border-left: 3px solid #10B981; font-size: 0.84rem; color: #10B981;
+    margin: 14px 0; line-height: 1.6;
 }
 .section-title {
-    font-size: 1rem; font-weight: 700; color: #1F273A;
-    margin: 24px 0 8px 0; padding-bottom: 6px;
-    border-bottom: 1.5px solid #E2E8F0;
+    font-size: 0.82rem; font-weight: 700; color: #6B7280;
+    margin: 22px 0 8px 0; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-transform: uppercase; letter-spacing: 0.06em;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown(f"""
-<div class="setup-header">
-    <h2>⚙️ Quick Setup</h2>
-    <p>One-time setup to personalise CareerOS and enable job automation for you.</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">⚙️</span><span class="pg-name">Setup</span><span class="pg-sub">One-time personalisation</span></div>', unsafe_allow_html=True)
 
 # Load existing setup
 profile = store.load_profile()
@@ -66,17 +54,14 @@ st.markdown('<div class="section-title">📱 Notifications (Push — Instant & F
 ntfy_topic = get_topic(email)
 
 st.markdown(f"""
-<div style="background:#F0FDF4;border-radius:12px;padding:20px 24px;border:1.5px solid #6EE7B7;margin-bottom:16px;">
-    <div style="font-size:0.8rem;font-weight:600;color:#059669;text-transform:uppercase;
-                letter-spacing:0.05em;margin-bottom:8px;">Your Notification Channel</div>
-    <div style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#064E3B;
-                background:#D1FAE5;padding:8px 14px;border-radius:8px;display:inline-block;
-                margin-bottom:12px;">{ntfy_topic}</div>
-    <div style="font-size:0.85rem;color:#065F46;line-height:1.6;">
-        <strong>One-time setup (30 seconds):</strong><br>
-        1. Open the <strong>ntfy app</strong> on your phone<br>
-        2. Tap <strong>+</strong> → paste <code>{ntfy_topic}</code> → Subscribe<br>
-        3. Click <strong>Test Notification</strong> below to confirm it works
+<div style="background:rgba(16,185,129,0.07);border-radius:10px;padding:16px 20px;border:1px solid rgba(16,185,129,0.2);margin-bottom:14px;">
+    <div style="font-size:0.7rem;font-weight:700;color:#10B981;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Your Notification Channel</div>
+    <div style="font-family:monospace;font-size:1rem;font-weight:700;color:#6EE7B7;background:rgba(16,185,129,0.12);padding:6px 12px;border-radius:6px;display:inline-block;margin-bottom:10px;">{ntfy_topic}</div>
+    <div style="font-size:0.83rem;color:#9CA3AF;line-height:1.65;">
+        <b style="color:#E2E8F0;">One-time setup (30 sec):</b><br>
+        1. Open <b style="color:#E2E8F0;">ntfy app</b> on your phone &nbsp;·&nbsp;
+        2. Tap <b style="color:#E2E8F0;">+</b> → paste topic → Subscribe &nbsp;·&nbsp;
+        3. Click <b style="color:#E2E8F0;">Test</b> below
     </div>
 </div>
 """, unsafe_allow_html=True)

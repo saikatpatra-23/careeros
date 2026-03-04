@@ -27,66 +27,45 @@ store = UserStore(email)
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-.page-header {
-    background: linear-gradient(135deg, #0F4C81 0%, #1B6FC9 100%);
-    border-radius: 14px; padding: 24px 28px; color: white; margin-bottom: 24px;
-}
-.page-header h2 { margin: 0 0 4px 0; font-size: 1.6rem; font-weight: 700; }
-.page-header p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
-
-.score-ring {
-    text-align: center; padding: 20px;
-    border-radius: 16px; margin-bottom: 8px;
-}
-.score-number { font-size: 4rem; font-weight: 800; line-height: 1; }
-.score-label  { font-size: 0.85rem; color: #6B7280; margin-top: 4px; }
+.score-ring { text-align: center; padding: 18px; border-radius: 14px; margin-bottom: 8px; }
+.score-number { font-size: 3.6rem; font-weight: 800; line-height: 1; }
+.score-label  { font-size: 0.82rem; color: #6B7280; margin-top: 4px; }
 
 .verdict-card {
-    border-radius: 12px; padding: 16px 20px;
-    font-size: 0.95rem; font-weight: 600;
-    margin-bottom: 16px; text-align: center;
+    border-radius: 10px; padding: 14px 18px;
+    font-size: 0.9rem; font-weight: 600;
+    margin-bottom: 14px; text-align: center;
 }
-
 .param-row {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 0; border-bottom: 1px solid #F3F4F6;
+    padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-.param-label { font-size: 0.875rem; font-weight: 600; color: #374151; width: 120px; flex-shrink: 0; }
-.param-bar-wrap { flex: 1; background: #E5E7EB; border-radius: 100px; height: 8px; }
-.param-comment { font-size: 0.8rem; color: #6B7280; width: 200px; flex-shrink: 0; text-align: right; }
+.param-label   { font-size: 0.85rem; font-weight: 600; color: #E2E8F0; width: 110px; flex-shrink: 0; }
+.param-bar-wrap { flex: 1; background: rgba(255,255,255,0.08); border-radius: 100px; height: 6px; }
+.param-comment { font-size: 0.78rem; color: #6B7280; width: 190px; flex-shrink: 0; text-align: right; }
 
 .keyword-pill {
-    display: inline-block; padding: 3px 12px; border-radius: 100px;
-    font-size: 0.8rem; margin: 3px; font-weight: 500;
+    display: inline-block; padding: 2px 10px; border-radius: 100px;
+    font-size: 0.78rem; margin: 3px; font-weight: 500;
 }
-
 .rec-card {
-    background: white; border-radius: 10px;
-    padding: 14px 18px; border: 1.5px solid #E5E7EB;
-    margin: 8px 0; font-size: 0.875rem;
+    background: #1A1D27; border-radius: 10px;
+    padding: 12px 16px; border: 1px solid rgba(255,255,255,0.07);
+    margin: 6px 0; font-size: 0.85rem;
 }
-.rec-high   { border-left: 4px solid #EF4444; }
-.rec-medium { border-left: 4px solid #F59E0B; }
-.rec-low    { border-left: 4px solid #10B981; }
+.rec-high   { border-left: 3px solid #EF4444; }
+.rec-medium { border-left: 3px solid #F59E0B; }
+.rec-low    { border-left: 3px solid #10B981; }
 
 .gap-card {
-    background: #FFF7ED; border-radius: 12px;
-    padding: 14px 20px; border-left: 4px solid #F97316;
-    font-size: 0.9rem; color: #92400E; margin-top: 12px;
+    background: rgba(249,115,22,0.08); border-radius: 10px;
+    padding: 12px 16px; border-left: 3px solid #F97316;
+    font-size: 0.875rem; color: #FB923C; margin-top: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="page-header">
-    <h2>🎯 ATS Score Checker</h2>
-    <p>Paste any job description — CareerOS tells you exactly how your resume matches it, what's missing, and what to fix.</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">🎯</span><span class="pg-name">ATS Checker</span><span class="pg-sub">Paste any JD → match score + what to fix</span></div>', unsafe_allow_html=True)
 
 # ── Resume check ──────────────────────────────────────────────────────────────
 resume_saved = store.load_resume()

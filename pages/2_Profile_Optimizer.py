@@ -25,12 +25,7 @@ inject_global_css()
 email = get_user_email()
 store = UserStore(email)
 
-st.markdown("""
-<div class="page-header" style="background:linear-gradient(135deg,#0F4C81 0%,#1B6FC9 100%);">
-    <h2>🔗 Profile Optimizer</h2>
-    <p>Copy-pasteable content for Naukri and LinkedIn — optimised for recruiter search ranking.</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">🔗</span><span class="pg-name">Profile Optimizer</span><span class="pg-sub">Naukri + LinkedIn content</span></div>', unsafe_allow_html=True)
 
 resume_saved = store.load_resume()
 resume_data  = resume_saved.get("structured_data", {})

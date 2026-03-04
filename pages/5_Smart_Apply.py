@@ -73,66 +73,46 @@ store = UserStore(email)
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-.page-header {
-    background: linear-gradient(135deg, #1E1B4B 0%, #3730A3 100%);
-    border-radius: 14px; padding: 24px 28px; color: white; margin-bottom: 24px;
-}
-.page-header h2 { margin: 0 0 4px 0; font-size: 1.6rem; font-weight: 700; }
-.page-header p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
-
 .how-step {
-    background: white; border-radius: 10px;
-    padding: 16px 20px; border: 1.5px solid #E5E7EB;
-    margin: 8px 0;
+    background: #1A1D27; border-radius: 10px;
+    padding: 14px 18px; border: 1px solid rgba(255,255,255,0.07); margin: 6px 0;
 }
 .how-step-num {
-    display: inline-block; background: #3730A3; color: white;
-    border-radius: 50%; width: 28px; height: 28px;
-    text-align: center; line-height: 28px; font-size: 0.85rem;
+    display: inline-block; background: rgba(79,142,247,0.2); color: #4F8EF7;
+    border-radius: 50%; width: 26px; height: 26px;
+    text-align: center; line-height: 26px; font-size: 0.82rem;
     font-weight: 700; margin-right: 10px;
 }
 .stat-box {
-    background: white; border-radius: 12px;
-    padding: 20px; border: 1.5px solid #E5E7EB;
-    text-align: center;
+    background: #1A1D27; border-radius: 10px;
+    padding: 18px; border: 1px solid rgba(255,255,255,0.07); text-align: center;
 }
-.stat-num { font-size: 2rem; font-weight: 800; color: #1E1B4B; }
-.stat-lbl { font-size: 0.8rem; color: #6B7280; margin-top: 2px; }
+.stat-num { font-size: 1.9rem; font-weight: 800; color: #4F8EF7; }
+.stat-lbl { font-size: 0.78rem; color: #6B7280; margin-top: 2px; }
 
 .run-card {
-    background: white; border-radius: 10px;
-    padding: 14px 18px; border: 1.5px solid #E5E7EB;
-    margin: 8px 0;
+    background: #1A1D27; border-radius: 10px;
+    padding: 12px 16px; border: 1px solid rgba(255,255,255,0.07); margin: 6px 0;
 }
 .applied-pill {
-    display: inline-block; background: #D1FAE5; color: #065F46;
-    border-radius: 100px; padding: 2px 10px; font-size: 0.78rem;
+    display: inline-block; background: rgba(16,185,129,0.15); color: #10B981;
+    border-radius: 100px; padding: 2px 10px; font-size: 0.76rem;
     font-weight: 600; margin-right: 4px;
 }
 .skipped-pill {
-    display: inline-block; background: #FEE2E2; color: #991B1B;
-    border-radius: 100px; padding: 2px 10px; font-size: 0.78rem;
+    display: inline-block; background: rgba(239,68,68,0.12); color: #F87171;
+    border-radius: 100px; padding: 2px 10px; font-size: 0.76rem;
     font-weight: 600; margin-right: 4px;
 }
 .warning-box {
-    background: #FFFBEB; border-radius: 12px;
-    padding: 16px 20px; border-left: 4px solid #F59E0B;
-    font-size: 0.875rem; color: #78350F; margin: 12px 0;
+    background: rgba(245,158,11,0.07); border-radius: 8px;
+    padding: 12px 16px; border-left: 3px solid #F59E0B;
+    font-size: 0.875rem; color: #C49A20; margin: 10px 0;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="page-header">
-    <h2>🤖 Smart Job Apply</h2>
-    <p>CareerOS reads every JD with Claude AI, scores it against your profile, and only applies where it genuinely fits.
-    No spray-and-pray. No domain mismatches.</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">🤖</span><span class="pg-name">Smart Auto-Apply</span><span class="pg-sub">AI scoring + auto-apply at 9:30 AM &amp; 2 PM</span></div>', unsafe_allow_html=True)
 
 # ── Resume check ──────────────────────────────────────────────────────────────
 resume_saved = store.load_resume()

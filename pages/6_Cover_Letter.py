@@ -23,73 +23,57 @@ store = UserStore(email)
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-.page-header {
-    background: linear-gradient(135deg, #064E3B 0%, #059669 100%);
-    border-radius: 14px; padding: 24px 28px; color: white; margin-bottom: 24px;
-}
-.page-header h2 { margin: 0 0 4px 0; font-size: 1.6rem; font-weight: 700; }
-.page-header p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
-
 .subject-box {
-    background: #F0FDF4; border-radius: 10px;
-    padding: 14px 18px; border-left: 4px solid #10B981;
-    font-size: 0.875rem; color: #065F46; margin-bottom: 16px;
+    background: rgba(16,185,129,0.08); border-radius: 10px;
+    padding: 12px 16px; border-left: 3px solid #10B981;
+    font-size: 0.875rem; color: #10B981; margin-bottom: 14px;
 }
-.subject-label { font-size: 0.75rem; font-weight: 600; color: #059669;
+.subject-label { font-size: 0.7rem; font-weight: 700; color: #10B981;
                  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-.subject-text  { font-size: 0.95rem; font-weight: 600; color: #064E3B; }
+.subject-text  { font-size: 0.9rem; font-weight: 600; color: #6EE7B7; }
 
 .letter-box {
-    background: white; border-radius: 12px;
-    padding: 28px 32px; border: 1.5px solid #D1D5DB;
-    font-size: 0.9rem; line-height: 1.75; color: #1F2937;
-    white-space: pre-wrap; font-family: 'Inter', sans-serif;
+    background: #1A1D27; border-radius: 10px;
+    padding: 22px 26px; border: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.875rem; line-height: 1.8; color: #C9D1D9;
+    white-space: pre-wrap;
 }
 
 .meta-pill {
-    display: inline-block; background: #F3F4F6; border-radius: 100px;
-    padding: 3px 12px; font-size: 0.78rem; color: #6B7280;
-    font-weight: 500; margin-right: 8px;
+    display: inline-block; background: rgba(255,255,255,0.07); border-radius: 100px;
+    padding: 3px 12px; font-size: 0.76rem; color: #9CA3AF;
+    font-weight: 500; margin-right: 8px; border: 1px solid rgba(255,255,255,0.07);
 }
 
 .hook-box {
-    background: #EFF6FF; border-radius: 10px;
-    padding: 14px 18px; border-left: 4px solid #3B82F6;
-    font-size: 0.875rem; color: #1E40AF; margin-top: 16px;
+    background: rgba(59,130,246,0.08); border-radius: 10px;
+    padding: 12px 16px; border-left: 3px solid #3B82F6;
+    font-size: 0.875rem; color: #93B4F8; margin-top: 14px;
     font-style: italic;
 }
 
 .tailor-box {
-    background: #FFFBEB; border-radius: 10px;
-    padding: 12px 16px; border-left: 4px solid #F59E0B;
-    font-size: 0.825rem; color: #78350F; margin-top: 12px;
+    background: rgba(245,158,11,0.07); border-radius: 8px;
+    padding: 10px 14px; border-left: 3px solid #F59E0B;
+    font-size: 0.82rem; color: #C49A20; margin-top: 10px;
 }
 
 .hist-card {
-    background: white; border-radius: 10px;
-    padding: 14px 18px; border: 1.5px solid #E5E7EB; margin: 8px 0;
+    background: #1A1D27; border-radius: 10px;
+    padding: 12px 16px; border: 1px solid rgba(255,255,255,0.07); margin: 6px 0;
 }
-.hist-date { font-size: 0.75rem; color: #9CA3AF; }
-.hist-role { font-size: 0.9rem; font-weight: 600; color: #1F2937; }
+.hist-date { font-size: 0.73rem; color: #6B7280; }
+.hist-role { font-size: 0.875rem; font-weight: 600; color: #E2E8F0; }
 
 .tip-row {
-    background: #F0FDF4; border-radius: 10px;
-    padding: 12px 16px; font-size: 0.825rem; color: #065F46;
-    margin-bottom: 20px;
+    background: rgba(16,185,129,0.07); border-radius: 8px;
+    padding: 10px 14px; font-size: 0.82rem; color: #10B981;
+    margin-bottom: 16px; border-left: 3px solid #10B981;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="page-header">
-    <h2>✉️ Cover Letter Generator</h2>
-    <p>Paste a JD → CareerOS writes a tailored cover letter that actually gets read by Indian recruiters.</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">✉️</span><span class="pg-name">Cover Letter</span><span class="pg-sub">Paste JD → ready in 10 sec</span></div>', unsafe_allow_html=True)
 
 # ── Resume check ──────────────────────────────────────────────────────────────
 resume_saved = store.load_resume()

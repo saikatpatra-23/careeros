@@ -33,108 +33,69 @@ inject_global_css()
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-/* Page header */
-.page-header {
-    background: linear-gradient(135deg, #1B4F9C 0%, #2563EB 100%);
-    border-radius: 14px;
-    padding: 24px 28px;
-    color: white;
-    margin-bottom: 20px;
-}
-.page-header h2 { margin: 0 0 4px 0; font-size: 1.6rem; font-weight: 700; }
-.page-header p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
-
-/* Progress milestone bar */
+/* Milestone bar — dark */
 .milestone-bar {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    margin: 16px 0;
-    background: white;
-    border-radius: 12px;
-    padding: 14px 20px;
-    border: 1.5px solid #E2E8F0;
+    display: flex; align-items: center; gap: 0;
+    margin: 14px 0; background: #1A1D27;
+    border-radius: 10px; padding: 12px 18px;
+    border: 1px solid rgba(255,255,255,0.07);
 }
 .milestone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-    font-size: 0.72rem;
-    color: #9CA3AF;
-    text-align: center;
-    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    flex: 1; font-size: 0.68rem; color: #6B7280;
+    text-align: center; position: relative;
 }
-.milestone.active  { color: #1B4F9C; font-weight: 600; }
-.milestone.done    { color: #059669; }
+.milestone.active { color: #4F8EF7; font-weight: 600; }
+.milestone.done   { color: #10B981; }
 .milestone .dot {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: #E2E8F0;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.8rem;
-    margin-bottom: 4px;
-    border: 2px solid #E2E8F0;
+    font-size: 0.75rem; margin-bottom: 4px;
+    border: 1.5px solid rgba(255,255,255,0.1);
 }
-.milestone.active .dot { background: #EBF3FB; border-color: #1B4F9C; color: #1B4F9C; }
-.milestone.done   .dot { background: #D1FAE5; border-color: #059669; color: #059669; }
+.milestone.active .dot { background: rgba(79,142,247,0.15); border-color: #4F8EF7; color: #4F8EF7; }
+.milestone.done   .dot { background: rgba(16,185,129,0.15); border-color: #10B981;  color: #10B981; }
 .milestone-line {
-    height: 2px; flex: 1; background: #E2E8F0;
-    margin-bottom: 20px;
-    min-width: 20px;
+    height: 2px; flex: 1; background: rgba(255,255,255,0.07);
+    margin-bottom: 20px; min-width: 16px;
 }
-.milestone-line.done { background: #059669; }
+.milestone-line.done { background: #10B981; }
 
 /* Info banner */
 .info-banner {
-    background: #EBF3FB;
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    color: #1B4F9C;
-    border-left: 4px solid #1B4F9C;
-    margin: 10px 0;
+    background: rgba(79,142,247,0.08);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 0.85rem; color: #93B4F8;
+    border-left: 3px solid #4F8EF7; margin: 10px 0;
 }
 
 /* Role card */
 .role-card {
-    background: white;
-    border-radius: 14px;
-    padding: 20px 24px;
-    border: 1.5px solid #059669;
-    border-left: 5px solid #059669;
-    margin: 14px 0;
+    background: #1A1D27; border-radius: 12px;
+    padding: 18px 22px;
+    border: 1px solid rgba(16,185,129,0.25);
+    border-left: 4px solid #10B981; margin: 12px 0;
 }
 .warn-card {
-    background: #FFFBEB;
-    border-radius: 10px;
-    padding: 14px 18px;
-    border-left: 4px solid #F59E0B;
-    margin: 8px 0;
-    font-size: 0.9rem;
+    background: rgba(245,158,11,0.07);
+    border-radius: 8px; padding: 12px 16px;
+    border-left: 3px solid #F59E0B;
+    margin: 8px 0; font-size: 0.875rem; color: #C49A20;
 }
 
 /* Unlock banner */
 .unlock-banner {
-    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
-    border-radius: 12px;
-    padding: 16px 20px;
-    border-left: 5px solid #059669;
-    font-size: 0.95rem;
-    color: #065F46;
-    font-weight: 600;
-    text-align: center;
-    margin: 10px 0;
+    background: rgba(16,185,129,0.1);
+    border-radius: 10px; padding: 14px 18px;
+    border-left: 4px solid #10B981;
+    font-size: 0.9rem; color: #10B981;
+    font-weight: 600; text-align: center; margin: 10px 0;
 }
 
-/* Chat container */
-.stChatMessage { border-radius: 12px !important; }
-
-/* Override Streamlit send button */
-.stChatInputContainer { border-radius: 12px !important; }
+/* Chat */
+.stChatMessage { border-radius: 10px !important; }
+.stChatInputContainer { border-radius: 10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -159,13 +120,7 @@ def _init():
 
 _init()
 
-# ── Page header ───────────────────────────────────────────────────────────────
-st.markdown(f"""
-<div class="page-header">
-    <h2>📄 Resume Builder</h2>
-    <p>Bilingual chat (Hindi + English) → Role suggestion → ATS-friendly Word resume download</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">📄</span><span class="pg-name">Resume Builder</span><span class="pg-sub">Chat → ATS resume → Word + PDF</span></div>', unsafe_allow_html=True)
 
 
 # ── Milestone bar helper ───────────────────────────────────────────────────────
