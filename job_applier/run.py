@@ -180,15 +180,25 @@ async def main():
     # ── Browser ────────────────────────────────────────────────────────────────
     async with async_playwright() as pw:
         headless = inp.get("headless", True)  # True = service/scheduled mode, False = debug
-        browser = await pw.chromium.launch(
-            headless=headless,
-            args=["--disable-blink-features=AutomationControlled"],
+        # Use real Chrome (channel="chrome") in headless mode — Naukri blocks Playwright Chromium.
+        # Falls back to Chromium if Chrome is not installed (headless=False debug mode).
+        import shutil
+        use_chrome = headless and shutil.which("chrome") or (
+            headless and Path("C:/Program Files/Google/Chrome/Application/chrome.exe").exists()
         )
+        launch_kwargs = {
+            "headless": headless,
+            "args": ["--disable-blink-features=AutomationControlled"],
+        }
+        if use_chrome:
+            launch_kwargs["channel"] = "chrome"
+            log.info("Using real Chrome (headless) to bypass bot detection")
+        browser = await pw.chromium.launch(**launch_kwargs)
         context = await browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
+                "Chrome/133.0.0.0 Safari/537.36"
             ),
             viewport={"width": 1366, "height": 768},
             locale="en-IN",

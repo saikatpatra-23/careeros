@@ -278,14 +278,18 @@ with tab_setup:
     install_readme = """CareerOS Local Runner — Quick Install
 =======================================
 
+REQUIREMENT: Google Chrome must be installed on this PC.
+  Download from: https://www.google.com/chrome/
+  (Chrome runs hidden in the background — no window will open)
+
 INSTALL AS WINDOWS SERVICE (runs on boot, no login needed):
   1. Open PowerShell as Administrator
      (Right-click the Start menu → Windows PowerShell (Admin))
   2. Navigate to this folder:
      cd "C:\\CareerOS"   (or wherever you unzipped)
-  3. Run:
+  3. Run the installer:
      .\\install_service.ps1
-  4. Done. The service starts automatically on every boot.
+  4. Done. CareerOS starts automatically on every boot.
 
 VERIFY IT'S RUNNING:
   Get-Service CareerOSWatcher
@@ -301,6 +305,7 @@ MANUAL TRIGGER (runs immediately):
 SCHEDULED TIMES: 9:30 AM and 2:00 PM daily.
 
 LOGS: logs\\service.log
+RESULTS: Appear in CareerOS web app → Smart Apply → Run History
 """
 
     zip_buffer = io.BytesIO()
