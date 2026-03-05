@@ -52,14 +52,62 @@ class UserStore:
         return self.load("profile.json", {})
 
     def save_resume(self, resume_dict: dict) -> None:
-        # Keep last 5 versions
+        import datetime
+        if "created_at" not in resume_dict:
+            resume_dict["created_at"] = datetime.datetime.now().isoformat()
+        if "vault_label" not in resume_dict:
+            role = (resume_dict.get("target_role")
+                    or resume_dict.get("structured_data", {}).get("target_title")
+                    or "Resume")
+            date_str = datetime.datetime.now().strftime("%d %b %Y, %I:%M %p")
+            resume_dict["vault_label"] = f"{role} — {date_str}"
         history = self.load("resume_history.json", [])
         history.append(resume_dict)
         self.save("resume_history.json", history[-5:])
         self.save("generated_resume.json", resume_dict)
+        # Clear draft state — resume is complete
+        for fname in ("resume_draft_state.json",):
+            p = self.user_dir / fname
+            if p.exists():
+                p.unlink()
 
     def load_resume(self) -> dict:
         return self.load("generated_resume.json", {})
+
+    def load_resume_vault(self) -> list:
+        """All saved resumes, newest first."""
+        history = self.load("resume_history.json", [])
+        return list(reversed(history))
+
+    def save_draft_state(self, step: int, exchange_count: int) -> None:
+        import datetime
+        self.save("resume_draft_state.json", {
+            "step":           step,
+            "exchange_count": exchange_count,
+            "saved_at":       datetime.datetime.now().isoformat(),
+        })
+
+    def load_draft_state(self) -> dict:
+        return self.load("resume_draft_state.json", {})
+
+    def purge_stale_draft(self, days: int = 7) -> bool:
+        """Delete in-progress chat + draft state if idle for `days` days. Returns True if purged."""
+        import datetime
+        draft = self.load_draft_state()
+        if not draft:
+            return False
+        try:
+            dt  = datetime.datetime.fromisoformat(draft.get("saved_at", ""))
+            age = (datetime.datetime.now() - dt).days
+            if age >= days:
+                for fname in ("resume_chat.json", "resume_draft_state.json"):
+                    p = self.user_dir / fname
+                    if p.exists():
+                        p.unlink()
+                return True
+        except Exception:
+            pass
+        return False
 
     def save_chat_history(self, history: list) -> None:
         self.save("resume_chat.json", history)

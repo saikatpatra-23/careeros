@@ -103,6 +103,9 @@ email = get_user_email()
 name  = get_user_name()
 store = UserStore(email)
 
+# Purge stale draft (>7 days idle) silently on every page load
+store.purge_stale_draft(days=7)
+
 # ── Session state ─────────────────────────────────────────────────────────────
 def _init():
     defaults = {
@@ -162,7 +165,9 @@ def _start_new_session(existing_profile):
         opening = session.start()
     st.session_state.rb_session  = session
     st.session_state.rb_chat     = [("assistant", opening)]
+    st.session_state.rb_exchange = 0
     st.session_state.rb_step     = 2
+    store.save_draft_state(step=2, exchange_count=0)
     st.rerun()
 
 
@@ -170,8 +175,13 @@ def _start_new_session(existing_profile):
 # STEP 1 — INTRO
 # =============================================================================
 if st.session_state.rb_step == 1:
-    existing  = store.load_profile()
-    has_prev  = bool(existing.get("current_title"))
+    existing    = store.load_profile()
+    saved_chat  = store.load_chat_history()
+    draft_state = store.load_draft_state()
+    vault       = store.load_resume_vault()
+
+    has_draft   = bool(saved_chat)
+    has_vault   = bool(vault)
 
     _milestone_bar(0, False)
 
@@ -190,21 +200,34 @@ It will ask about your work, your achievements, and what makes you good at what 
 **Roughly 10-15 minutes → professional resume ready.**
         """)
 
-        if has_prev:
-            st.info(f"Previous profile found: **{existing.get('current_title')}** at **{existing.get('current_company', '')}**")
+        if has_draft:
+            saved_exchanges = draft_state.get("exchange_count", len(saved_chat) // 2)
+            saved_at        = draft_state.get("saved_at", "")
+            saved_label     = ""
+            if saved_at:
+                import datetime as _dt
+                try:
+                    saved_label = _dt.datetime.fromisoformat(saved_at).strftime("%d %b, %I:%M %p")
+                except Exception:
+                    pass
+            st.info(
+                f"**In-progress session found** — {saved_exchanges} exchange{'s' if saved_exchanges != 1 else ''} saved"
+                + (f" (last saved: {saved_label})" if saved_label else "")
+                + "\n\nContinue from where you left off, or start fresh."
+            )
             col_a, col_b = st.columns(2)
             with col_a:
-                if st.button("Continue from last session", type="primary", use_container_width=True):
-                    saved_chat = store.load_chat_history()
-                    if saved_chat:
-                        session = ResumeBuilderSession.restore(_get_api_key(), saved_chat, len(saved_chat) // 2)
-                        st.session_state.rb_session  = session
-                        st.session_state.rb_chat     = [(m["role"], m["content"]) for m in saved_chat]
-                        st.session_state.rb_exchange  = session.exchange_count
-                        st.session_state.rb_step      = 2
-                        st.rerun()
+                if st.button("Continue from where I left off", type="primary", use_container_width=True):
+                    session = ResumeBuilderSession.restore(_get_api_key(), saved_chat, saved_exchanges)
+                    st.session_state.rb_session  = session
+                    st.session_state.rb_chat     = [(m["role"], m["content"]) for m in saved_chat]
+                    st.session_state.rb_exchange = session.exchange_count
+                    st.session_state.rb_step     = 2
+                    st.rerun()
             with col_b:
-                if st.button("Start fresh", use_container_width=True):
+                if st.button("Start fresh instead", use_container_width=True):
+                    store.save("resume_chat.json", [])
+                    store.save("resume_draft_state.json", {})
                     _start_new_session(existing)
         else:
             if st.button("Start Building My Resume →", type="primary", use_container_width=True):
@@ -238,13 +261,33 @@ It will ask about your work, your achievements, and what makes you good at what 
                         "domain_family":   parsed.get("domain_family", ""),
                         "ats_keywords":    parsed.get("ats_keywords", []),
                         "role_suggestion": parsed.get("role_suggestion", {}),
-                        "created_at":      __import__("datetime").datetime.now().isoformat(),
                     })
                     st.session_state.rb_resume = parsed
                     st.session_state.rb_step   = 3
                     st.rerun()
                 except Exception as e:
                     st.error(f"Could not parse resume: {e}")
+
+        # ── Resume Vault ──────────────────────────────────────────────────────
+        if has_vault:
+            st.markdown("---")
+            st.markdown("#### Resume Vault")
+            st.caption(f"{len(vault)} saved resume{'s' if len(vault) > 1 else ''} — load any version instantly.")
+            for i, saved in enumerate(vault):
+                label      = saved.get("vault_label", f"Resume {len(vault) - i}")
+                created_at = saved.get("created_at", "")
+                role       = saved.get("target_role", saved.get("structured_data", {}).get("target_title", ""))
+                v_col1, v_col2 = st.columns([4, 1])
+                with v_col1:
+                    st.markdown(f"**{label}**")
+                    if role and role not in label:
+                        st.caption(role)
+                with v_col2:
+                    if st.button("Load", key=f"vault_load_{i}", use_container_width=True):
+                        resume_data = saved.get("structured_data", saved)
+                        st.session_state.rb_resume = resume_data
+                        st.session_state.rb_step   = 3
+                        st.rerun()
 
     with col_how:
         st.markdown("### What makes CareerOS different")
@@ -323,6 +366,7 @@ if st.session_state.rb_step == 2:
         st.session_state.rb_chat.append(("assistant", reply))
         st.session_state.rb_exchange = session.exchange_count
         store.save_chat_history(session.get_messages_for_storage())
+        store.save_draft_state(step=2, exchange_count=session.exchange_count)
         st.rerun()
 
     st.divider()

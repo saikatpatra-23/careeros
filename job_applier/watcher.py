@@ -130,7 +130,7 @@ def main():
         # 1. Scheduled times
         for t_sched in SCHEDULED_TIMES:
             run_key = f"scheduled_{t_sched}"
-            if current_time == t_sched and not already_ran_today(state, run_key):
+            if current_time >= t_sched and not already_ran_today(state, run_key):
                 run_automation(f"Scheduled {t_sched}")
                 mark_ran(state, run_key)
                 state = load_state()
