@@ -15,7 +15,7 @@ from config import DATA_DIR
 
 
 class UserStore:
-    """Read/write per-user JSON files under data/users/{email_hash}/"""
+    """Read/write per-user JSON files under data/users/{email_hash}/. v2: vault + draft."""
 
     def __init__(self, email: str):
         self.email   = email
