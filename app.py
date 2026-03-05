@@ -139,13 +139,7 @@ with c1:
     cls  = "done" if has_res else ""
     lbl  = "✓ Done" if has_res else "Step 1"
     meta = f'<div class="step-meta">🎯 {summary["target_role"]}</div>' if summary.get("target_role") else ""
-    st.markdown(f"""<div class="step-card">
-        <span class="step-badge {cls}">{lbl}</span>
-        <div class="step-title">📄 Resume Builder</div>
-        <div class="step-body">AI chat → ATS Word + PDF resume in 15 min. Hindi or English.</div>
-        {meta}
-        <div class="prog-wrap"><div class="prog-fill" style="width:{pct}%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    st.html(f'<div class="step-card"><span class="step-badge {cls}">{lbl}</span><div class="step-title">📄 Resume Builder</div><div class="step-body">AI chat · ATS Word + PDF resume in 15 min. Hindi or English.</div>{meta}<div class="prog-wrap"><div class="prog-fill" style="width:{pct}%"></div></div></div>')
     st.markdown("<br>", unsafe_allow_html=True)
     st.page_link("pages/1_Resume_Builder.py", label="Open →", icon="📄")
 
@@ -153,12 +147,7 @@ with c2:
     pct2 = 100 if has_opt else 0
     cls2 = "done" if has_opt else ("locked" if not has_res else "")
     lbl2 = "✓ Done" if has_opt else ("Step 2" if has_res else "🔒")
-    st.markdown(f"""<div class="step-card">
-        <span class="step-badge {cls2}">{lbl2}</span>
-        <div class="step-title">🔗 Profile Optimizer</div>
-        <div class="step-body">Naukri headline, summary + LinkedIn About. Recruiters find you first.</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:{pct2}%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    st.html(f'<div class="step-card"><span class="step-badge {cls2}">{lbl2}</span><div class="step-title">🔗 Profile Optimizer</div><div class="step-body">Naukri headline, summary + LinkedIn About. Recruiters find you first.</div><div class="prog-wrap"><div class="prog-fill" style="width:{pct2}%"></div></div></div>')
     st.markdown("<br>", unsafe_allow_html=True)
     if has_res:
         st.page_link("pages/2_Profile_Optimizer.py", label="Open →", icon="🔗")
@@ -169,12 +158,7 @@ with c3:
     pct3 = 100 if has_res else 0
     cls3 = "done" if has_res else "locked"
     lbl3 = "Ready" if has_res else "🔒"
-    st.markdown(f"""<div class="step-card">
-        <span class="step-badge {cls3}">{lbl3}</span>
-        <div class="step-title">🎯 ATS Checker</div>
-        <div class="step-body">Paste any JD → match score, missing keywords, what to fix before applying.</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:{pct3}%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    st.html(f'<div class="step-card"><span class="step-badge {cls3}">{lbl3}</span><div class="step-title">🎯 ATS Checker</div><div class="step-body">Paste any JD · match score, missing keywords, what to fix before applying.</div><div class="prog-wrap"><div class="prog-fill" style="width:{pct3}%"></div></div></div>')
     st.markdown("<br>", unsafe_allow_html=True)
     if has_res:
         st.page_link("pages/4_ATS_Checker.py", label="Open →", icon="🎯")
@@ -185,12 +169,7 @@ with c4:
     pct4 = 100 if has_res else 0
     cls4 = "done" if has_res else "locked"
     lbl4 = "Step 4" if has_res else "🔒"
-    st.markdown(f"""<div class="step-card">
-        <span class="step-badge {cls4}">{lbl4}</span>
-        <div class="step-title">🤖 Smart Auto-Apply</div>
-        <div class="step-body">AI scores every JD vs your profile. Applies at 9:30 AM + 2 PM daily.</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:{pct4}%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    st.html(f'<div class="step-card"><span class="step-badge {cls4}">{lbl4}</span><div class="step-title">🤖 Smart Auto-Apply</div><div class="step-body">AI scores every JD vs your profile. Applies at 9:30 AM + 2 PM daily.</div><div class="prog-wrap"><div class="prog-fill" style="width:{pct4}%"></div></div></div>')
     st.markdown("<br>", unsafe_allow_html=True)
     if has_res:
         st.page_link("pages/5_Smart_Apply.py", label="Open →", icon="🤖")
@@ -209,12 +188,8 @@ t1, t2, t3    = st.columns(3)
 with t1:
     cls_cl = "done" if cl_count > 0 else ("" if has_res else "locked")
     lbl_cl = f"✓ {cl_count} letters" if cl_count > 0 else ("Ready" if has_res else "🔒")
-    st.markdown(f"""<div class="step-card">
-        <span class="step-badge {cls_cl}">{lbl_cl}</span>
-        <div class="step-title">✉️ Cover Letter</div>
-        <div class="step-body">Paste JD → tailored letter in 10 sec. 3 tones. India-optimised length.</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:{'100' if has_res else '0'}%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    pct_cl = 100 if has_res else 0
+    st.html(f'<div class="step-card"><span class="step-badge {cls_cl}">{lbl_cl}</span><div class="step-title">✉️ Cover Letter</div><div class="step-body">Paste JD · tailored letter in 10 sec. 3 tones. India-optimised length.</div><div class="prog-wrap"><div class="prog-fill" style="width:{pct_cl}%"></div></div></div>')
     st.markdown("<br>", unsafe_allow_html=True)
     if has_res:
         st.page_link("pages/6_Cover_Letter.py", label="Open →", icon="✉️")
@@ -222,20 +197,10 @@ with t1:
         st.caption("Build resume first")
 
 with t2:
-    st.markdown("""<div class="step-card">
-        <span class="step-badge soon">Soon</span>
-        <div class="step-title">📋 Application Tracker</div>
-        <div class="step-body">Track applications, follow-up reminders, interview scheduling.</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    st.html('<div class="step-card"><span class="step-badge soon">Soon</span><div class="step-title">📋 Application Tracker</div><div class="step-body">Track applications, follow-up reminders, interview scheduling.</div><div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div></div>')
 
 with t3:
-    st.markdown("""<div class="step-card">
-        <span class="step-badge soon">Soon</span>
-        <div class="step-title">🎤 Interview Prep</div>
-        <div class="step-body">STAR-format answers tailored to your background + target company.</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div>
-    </div>""", unsafe_allow_html=True)
+    st.html('<div class="step-card"><span class="step-badge soon">Soon</span><div class="step-title">🎤 Interview Prep</div><div class="step-body">STAR-format answers tailored to your background + target company.</div><div class="prog-wrap"><div class="prog-fill" style="width:0%"></div></div></div>')
 
 st.divider()
 st.caption("CareerOS · India-focused · Claude AI · Data stays on this server")
