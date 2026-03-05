@@ -268,27 +268,6 @@ It will ask about your work, your achievements, and what makes you good at what 
                 except Exception as e:
                     st.error(f"Could not parse resume: {e}")
 
-        # ── Resume Vault ──────────────────────────────────────────────────────
-        if has_vault:
-            st.markdown("---")
-            st.markdown("#### Resume Vault")
-            st.caption(f"{len(vault)} saved resume{'s' if len(vault) > 1 else ''} — load any version instantly.")
-            for i, saved in enumerate(vault):
-                label      = saved.get("vault_label", f"Resume {len(vault) - i}")
-                created_at = saved.get("created_at", "")
-                role       = saved.get("target_role", saved.get("structured_data", {}).get("target_title", ""))
-                v_col1, v_col2 = st.columns([4, 1])
-                with v_col1:
-                    st.markdown(f"**{label}**")
-                    if role and role not in label:
-                        st.caption(role)
-                with v_col2:
-                    if st.button("Load", key=f"vault_load_{i}", use_container_width=True):
-                        resume_data = saved.get("structured_data", saved)
-                        st.session_state.rb_resume = resume_data
-                        st.session_state.rb_step   = 3
-                        st.rerun()
-
     with col_how:
         st.markdown("### What makes CareerOS different")
         st.markdown("""
@@ -308,6 +287,23 @@ It will ask about your work, your achievements, and what makes you good at what 
 
 </div>
         """, unsafe_allow_html=True)
+
+    # ── Resume Vault — full width below both columns ───────────────────────────
+    if has_vault:
+        st.divider()
+        st.markdown("#### 🗄️ Resume Vault")
+        st.caption(f"{len(vault)} saved resume{'s' if len(vault) > 1 else ''} — load any previous version instantly.")
+        for i, saved in enumerate(vault):
+            label = saved.get("vault_label", f"Resume {len(vault) - i}")
+            v_col1, v_col2 = st.columns([5, 1])
+            with v_col1:
+                st.markdown(f"**{label}**")
+            with v_col2:
+                if st.button("Load", key=f"vault_load_{i}", use_container_width=True):
+                    resume_data = saved.get("structured_data", saved)
+                    st.session_state.rb_resume = resume_data
+                    st.session_state.rb_step   = 3
+                    st.rerun()
 
 
 # =============================================================================
