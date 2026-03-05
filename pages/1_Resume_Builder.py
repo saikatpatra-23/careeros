@@ -270,23 +270,12 @@ It will ask about your work, your achievements, and what makes you good at what 
 
     with col_how:
         st.markdown("### What makes CareerOS different")
-        st.markdown("""
-<div style="background:white;border-radius:12px;padding:20px;border:1.5px solid #E2E8F0;">
-
-**Knows how Naukri works** — RChilli ATS, search ranking, keyword density
-
-**Knows how recruiters think** — 6-second scan, what triggers a call
-
-**Bilingual** — Hindi ya English, dono chalega
-
-**Repositions your story** — operational language → leadership language automatically
-
-**Honest** — if you want role X but fit role Y, we'll tell you + give you a bridge path
-
-**India-specific salary bands** — know your market worth
-
-</div>
-        """, unsafe_allow_html=True)
+        st.markdown("**Knows how Naukri works** — RChilli ATS, search ranking, keyword density")
+        st.markdown("**Knows how recruiters think** — 6-second scan, what triggers a call")
+        st.markdown("**Bilingual** — Hindi ya English, dono chalega")
+        st.markdown("**Repositions your story** — operational language → leadership language automatically")
+        st.markdown("**Honest** — if you want role X but fit role Y, we'll tell you + give you a bridge path")
+        st.markdown("**India-specific salary bands** — know your market worth")
 
     # ── Resume Vault — full width below both columns ───────────────────────────
     if has_vault:
@@ -524,11 +513,6 @@ if st.session_state.rb_step == 3:
             st.rerun()
 
     st.divider()
-    st.markdown("""
-    <div style="background:white;border-radius:12px;padding:20px;border:1.5px solid #E2E8F0;text-align:center;">
-        <strong>Next step:</strong> Go to <strong>Profile Optimizer</strong> → get your Naukri headline,
-        summary, and LinkedIn About — copy-paste ready for recruiter search ranking.
-    </div>
-    """, unsafe_allow_html=True)
+    st.info("**Next step:** Go to **Profile Optimizer** → get your Naukri headline, summary, and LinkedIn About — copy-paste ready for recruiter search ranking.")
     st.markdown("<br>", unsafe_allow_html=True)
     st.page_link("pages/2_Profile_Optimizer.py", label="Go to Profile Optimizer →", icon="🔗")
