@@ -681,12 +681,16 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
     """
     After clicking Apply/Easy Apply on Naukri, a modal may appear asking for:
     - Current location (typeahead)
-    - Notice period (dropdown)
     - Current CTC / Expected CTC (inputs)
+    - Notice period (dropdown)
 
     Fills what it can find and ignores fields that aren't present.
+    Returns True if any modal field was found (modal was present).
     """
+    modal_found = False
     try:
+        await page.wait_for_timeout(1000)
+
         # ── Current location typeahead ─────────────────────────────────────────
         loc_selectors = [
             "input[placeholder*='current city' i]",
@@ -698,46 +702,83 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
             "[class*='currentLocation'] input",
             "[class*='location'] input[type='text']",
         ]
-        loc_input = None
         for sel in loc_selectors:
             try:
                 loc_input = await page.query_selector(sel)
                 if loc_input and await loc_input.is_visible():
+                    modal_found = True
+                    await loc_input.triple_click()
+                    await loc_input.type(current_loc, delay=80)
+                    await page.wait_for_timeout(1200)
+                    suggestion_selectors = [
+                        "[class*='suggestItem']",
+                        "[class*='suggestion-item']",
+                        "[class*='autocomplete'] li",
+                        "[class*='dropdown'] li",
+                        "ul.suggestions li",
+                        "[role='option']",
+                    ]
+                    clicked = False
+                    for ssel in suggestion_selectors:
+                        try:
+                            sug = await page.query_selector(ssel)
+                            if sug and await sug.is_visible():
+                                await sug.click()
+                                clicked = True
+                                break
+                        except Exception:
+                            continue
+                    if not clicked:
+                        await loc_input.press("Enter")
+                    log.info(f"Location filled: {current_loc}")
+                    await page.wait_for_timeout(600)
                     break
-                loc_input = None
             except Exception:
                 continue
 
-        if loc_input:
-            await loc_input.triple_click()
-            await loc_input.type(current_loc, delay=80)
-            await page.wait_for_timeout(1200)
+        # ── Current CTC ────────────────────────────────────────────────────────
+        ctc_selectors = [
+            "input[placeholder*='current ctc' i]",
+            "input[placeholder*='Current CTC' i]",
+            "input[id*='currentCtc' i]",
+            "input[id*='current_ctc' i]",
+            "[class*='currentCtc'] input",
+            "input[name*='currentCtc' i]",
+        ]
+        for sel in ctc_selectors:
+            try:
+                ctc_input = await page.query_selector(sel)
+                if ctc_input and await ctc_input.is_visible():
+                    modal_found = True
+                    await ctc_input.triple_click()
+                    await ctc_input.type("1500000", delay=60)   # 15 LPA default
+                    log.info("Current CTC filled: 15 LPA")
+                    await page.wait_for_timeout(400)
+                    break
+            except Exception:
+                continue
 
-            # Select first suggestion from typeahead dropdown
-            suggestion_selectors = [
-                "[class*='suggestItem']",
-                "[class*='suggestion-item']",
-                "[class*='autocomplete'] li",
-                "[class*='dropdown'] li",
-                "ul.suggestions li",
-                "[role='option']",
-                "[class*='naukri'] [class*='option']",
-            ]
-            for sel in suggestion_selectors:
-                try:
-                    suggestion = await page.query_selector(sel)
-                    if suggestion and await suggestion.is_visible():
-                        await suggestion.click()
-                        log.info(f"Location set to: {current_loc}")
-                        break
-                except Exception:
-                    continue
-            else:
-                # No dropdown appeared — try pressing Enter or Tab to confirm
-                await loc_input.press("Enter")
-                log.info(f"Location typed (no dropdown): {current_loc}")
-
-            await page.wait_for_timeout(600)
+        # ── Expected CTC ───────────────────────────────────────────────────────
+        ectc_selectors = [
+            "input[placeholder*='expected ctc' i]",
+            "input[placeholder*='Expected CTC' i]",
+            "input[id*='expectedCtc' i]",
+            "input[id*='expected_ctc' i]",
+            "[class*='expectedCtc'] input",
+            "input[name*='expectedCtc' i]",
+        ]
+        for sel in ectc_selectors:
+            try:
+                ectc_input = await page.query_selector(sel)
+                if ectc_input and await ectc_input.is_visible():
+                    modal_found = True
+                    await ectc_input.triple_click()
+                    await ectc_input.type("2000000", delay=60)  # 20 LPA default
+                    log.info("Expected CTC filled: 20 LPA")
+                    await page.wait_for_timeout(400)
+                    break
+            except Exception:
+                continue
 
         # ── Notice period dropdown ──────────────────────────────────────────────
         notice_selectors = [
@@ -750,7 +791,7 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
             try:
                 notice_el = await page.query_selector(sel)
                 if notice_el and await notice_el.is_visible():
-                    # Select "Immediate" or "0-15 days" if available
+                    modal_found = True
                     await notice_el.select_option(index=1)
                     log.info("Notice period set")
                     break
@@ -759,6 +800,8 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
 
     except Exception as e:
         log.debug(f"Easy Apply modal handler: {e}")
+
+    return modal_found
 
 
 # ── Apply: NVites inbox flow (click card → Apply button in detail panel) ───────
@@ -821,20 +864,35 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
         await apply_btn.click()
         await page.wait_for_timeout(random.randint(1500, 2500))
 
-        # Fill location / notice period if modal appears
+        # Fill location / CTC / notice period if modal appears
         await _handle_easy_apply_modal(page, current_loc)
         await page.wait_for_timeout(800)
 
-        # Handle any submit confirmation modal
+        # Submit
+        submitted = False
         for sel in ["button:has-text('Submit Application')", "button:has-text('Submit')"]:
             try:
                 btn = await page.query_selector(sel)
-                if btn:
+                if btn and await btn.is_visible():
                     await btn.click()
                     await page.wait_for_timeout(1500)
+                    submitted = True
                     break
             except Exception:
                 continue
+
+        if not submitted:
+            # Some NVite apply flows have no submit modal — check for confirmation
+            try:
+                conf = await page.query_selector("button:has-text('Applied'), .applied-text")
+                if conf:
+                    submitted = True
+            except Exception:
+                pass
+
+        if not submitted:
+            log.warning(f"NVite submit not confirmed — {title} @ {company}")
+            return False
 
         log.info(f"NVite applied (inbox flow) — {title} @ {company}")
 
@@ -914,30 +972,50 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         await page.wait_for_timeout(random.randint(1500, 2500))
 
         # ── Step 2: Fill Easy Apply modal fields (location, CTC, notice period) ─
-        await _handle_easy_apply_modal(page, current_loc)
+        modal_present = await _handle_easy_apply_modal(page, current_loc)
         await page.wait_for_timeout(random.randint(800, 1200))
 
-        # ── Step 3: Handle Easy Apply modal / drawer ────────────────────────────
-        # Some jobs show a modal; some go directly to a confirmation page
+        # ── Step 3: Submit the application ─────────────────────────────────────
+        # Only use unambiguous submit selectors — NOT 'Apply' (would re-click apply btn)
+        submitted = False
         submit_selectors = [
             "button:has-text('Submit Application')",
             "button:has-text('Submit')",
-            "button[class*='submit']",
-            "button.apply-button",     # secondary apply inside modal
-            "button:has-text('Apply')",
+            "button[class*='submit' i]:not([class*='apply-button'])",
         ]
         for sel in submit_selectors:
             try:
                 submit_btn = await page.query_selector(sel)
-                if submit_btn:
+                if submit_btn and await submit_btn.is_visible():
                     await submit_btn.click()
-                    await page.wait_for_timeout(1500)
+                    await page.wait_for_timeout(2000)
+                    submitted = True
                     log.info(f"Submitted application — {title} @ {company}")
                     break
             except Exception:
                 continue
 
-        # ── Step 3: Webhook notification (Make.com / n8n) ──────────────────────
+        # If no modal appeared and apply btn was clicked, treat as submitted
+        # (some Naukri jobs apply directly on click with no modal)
+        if not submitted and not modal_present:
+            # Verify by checking if apply button now shows "Applied"
+            try:
+                applied_check = await page.query_selector(
+                    "button:has-text('Applied'), [class*='applied'], .applied-text"
+                )
+                if applied_check:
+                    submitted = True
+                    log.info(f"Direct apply confirmed (no modal) — {title} @ {company}")
+                else:
+                    log.warning(f"Apply clicked but no confirmation found — {title} @ {company}")
+            except Exception:
+                pass
+
+        if not submitted:
+            log.warning(f"Submit not confirmed — marking as not applied: {title} @ {company}")
+            return False
+
+        # ── Step 4: Webhook notification (Make.com / n8n) ──────────────────────
         if make_webhook:
             try:
                 requests.post(make_webhook, json={
