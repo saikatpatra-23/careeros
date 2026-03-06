@@ -200,6 +200,10 @@ async def main():
     make_webhook  = inp.get("make_webhook_url", "")
     notif_pref    = inp.get("notif_pref", "email")
     notif_contact = inp.get("notification_contact", "")
+    current_ctc   = inp.get("current_ctc_lacs", 11.15)
+    expected_ctc  = inp.get("expected_ctc_lacs", 21.0)
+    notice_days   = inp.get("notice_period_days", 30)
+    alt_titles    = inp.get("alt_titles", [])
 
     results = {
         "date":              datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -280,7 +284,7 @@ async def main():
 
         # ── Process HR invites (P1 — always process, no cap) ─────────────────
         for invite in hr_invites:
-            matched, reason = _domain_match(ai_client, invite, resume_data, domain_family)
+            matched, reason = _domain_match(ai_client, invite, resume_data, domain_family, alt_titles)
             invite_record = {
                 "title":   invite.get("title"),
                 "company": invite.get("company"),
@@ -294,7 +298,9 @@ async def main():
                 tailored = _tailor_resume(ai_client, invite, resume_data)
                 applied  = await _apply_job(page, invite, tailored, make_webhook,
                                             notif_contact, notif_pref, current_loc,
-                                            is_hr_invite=True)
+                                            is_hr_invite=True, ai_client=ai_client,
+                                            current_ctc=current_ctc, expected_ctc=expected_ctc,
+                                            notice_days=notice_days)
                 invite_record["applied"] = applied
                 if applied:
                     results["hr_invites_applied"] += 1
@@ -312,7 +318,7 @@ async def main():
             if results["jobs_applied"] >= max_apply:
                 break
 
-            matched, reason = _domain_match(ai_client, job, resume_data, domain_family)
+            matched, reason = _domain_match(ai_client, job, resume_data, domain_family, alt_titles)
             if not matched:
                 results["jobs_skipped"] += 1
                 results["skipped_list"].append({
@@ -325,7 +331,9 @@ async def main():
             tailored = _tailor_resume(ai_client, job, resume_data)
             applied  = await _apply_job(page, job, tailored, make_webhook,
                                         notif_contact, notif_pref, current_loc,
-                                        is_hr_invite=False)
+                                        is_hr_invite=False, ai_client=ai_client,
+                                        current_ctc=current_ctc, expected_ctc=expected_ctc,
+                                        notice_days=notice_days)
 
             if applied:
                 results["jobs_applied"] += 1
@@ -464,23 +472,26 @@ async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
 
 
 # ── Domain match (research-backed Indian job market scorer) ────────────────────
-def _domain_match(client, job, resume_data, domain_family):
+def _domain_match(client, job, resume_data, domain_family, alt_titles=None):
     title   = job.get("title", "")
     company = job.get("company", "")
     jd      = job.get("description", "")
     age     = job.get("age_days", 0)
 
     target_title  = resume_data.get("target_title", "")
+    alt_titles    = alt_titles or []
     skills        = ", ".join(resume_data.get("ats_keywords", [])[:15])
     experience    = resume_data.get("experience", [])
     total_exp     = sum(_parse_years(e.get("period", "")) for e in experience)
     total_exp     = max(1, min(total_exp, 25))
     summary       = resume_data.get("summary", "")
+    all_titles    = ", ".join([target_title] + alt_titles) if alt_titles else target_title
 
     prompt = f"""You are a senior Indian recruiter. Decide: should this candidate apply to this job?
 
 CANDIDATE:
-- Target Role: {target_title}
+- Primary Target Role: {target_title}
+- Also acceptable roles: {", ".join(alt_titles) if alt_titles else "same as above"}
 - Domain: {domain_family}
 - Experience: {total_exp} years
 - Skills: {skills}
@@ -488,16 +499,19 @@ CANDIDATE:
 
 HARD REJECT — answer false if ANY applies:
 - Job age > 21 days (stale posting)
-- Seniority wrong: VP/Director/Head OR Junior/Fresher/0-2 yrs required
-- Wrong function: Software Engineer, Developer, QA, HR, Finance, Marketing, Sales
-- Domain completely irrelevant AND explicitly required (capital markets for IT candidate, etc.)
-- Location is fixed WFO in a city not preferred by candidate
+- Seniority wrong: VP/Director/Head/C-Level OR Junior/Fresher/0-2 yrs required
+- Wrong function: Software Engineer, Developer, QA, HR, Finance, Marketing, Sales, Data Scientist
+- Domain completely irrelevant AND explicitly required (capital markets, pharma clinical, etc.)
+- Location is fixed WFO in a city far from candidate's preferred locations
+
+APPLY if the role matches ANY of the candidate's acceptable titles or is a natural adjacent role
+(Project Manager, Program Manager, IT Manager, Delivery Manager, Technical Lead with management scope).
 
 MATCH SIGNALS:
-- Title matches candidate's target role family
-- Domain overlaps (same industry or adjacent)
-- Experience band fits
-- Skills appear in JD
+- Title is any of: {all_titles} or a very close variant
+- Domain overlaps (same industry or adjacent — enterprise IT, automotive, product, SaaS all OK)
+- Experience band fits (within 2-3 years)
+- Program/project delivery, stakeholder management, or Agile skills appear in JD
 
 JOB:
 Title: {title}
@@ -676,6 +690,252 @@ def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
     log.info(f"ntfy notification sent for HR invite from {invite.get('company')}")
 
 
+# ── AI-powered chatbot question answering ──────────────────────────────────────
+def _ai_chatbot_answer(client, question: str, options: list, resume_data: dict,
+                        current_ctc: float, expected_ctc: float,
+                        notice_days: int, location: str) -> str:
+    """Use Claude Haiku to answer a Naukri chatbot apply question."""
+    opts_str = "\n".join(f"- {o}" for o in options) if options else "(free text — short answer)"
+
+    prompt = f"""You are filling a Naukri job application chatbot for this candidate:
+- Experience: 8 years in IT program/project management
+- Current CTC: {current_ctc} Lacs per annum
+- Expected CTC: {expected_ctc} Lacs per annum
+- Notice period: {notice_days} days
+- Current location: {location}
+- Target role: {resume_data.get("target_title", "Technical Program Manager")}
+- Skills: {", ".join(resume_data.get("ats_keywords", [])[:10])}
+- Background: {resume_data.get("summary", "")[:200]}
+
+CHATBOT QUESTION: "{question}"
+
+{"AVAILABLE OPTIONS (pick ONE):" if options else ""}
+{opts_str}
+
+Rules:
+- For "current CTC" → reply "{current_ctc}"
+- For "expected CTC" → reply "{expected_ctc}"
+- For "notice period" or "joining time" → reply "{notice_days}"
+- For "years of experience": pick the highest option that is ≤ 8; if all options exceed 8 pick lowest; if no numeric option pick "Skip this question"
+- For location → reply "{location}"
+- For yes/no willingness/interest questions → reply "Yes"
+- For "residing in" location questions → reply "Yes"
+- If question asks about a specific tech skill the candidate lacks (e.g. Java, .NET, Oracle, Python, Coding): reply "0" for free text OR pick "Skip this question" if available
+- For years-of-experience free text: reply with a single number like "5" or "8" (no "years" suffix)
+- For options list: reply with the EXACT option text (copy exactly, case-sensitive)
+- For free text: reply with a SHORT, direct answer — single word or number preferred
+
+Reply with ONLY the answer, no explanation."""
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=60,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        # Heuristic fallback
+        q = question.lower()
+        if "current ctc" in q:       return str(current_ctc)
+        if "expected ctc" in q:      return str(expected_ctc)
+        if "notice" in q or "joining" in q: return str(notice_days)
+        if "location" in q or "city" in q:  return location
+        if options:
+            # Pick highest numeric non-skip option
+            nums = []
+            for o in options:
+                try: nums.append((float(o.split()[0]), o))
+                except: pass
+            if nums:
+                return max(n for n in nums if n[0] <= 8)[1] if any(n[0] <= 8 for n in nums) else nums[0][1]
+            # Pick any non-skip
+            for o in options:
+                if "skip" not in o.lower(): return o
+            return options[-1]
+        return "8"
+
+
+# ── Naukri chatbot apply handler ────────────────────────────────────────────────
+async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: str = "",
+                                 current_ctc: float = 11.15, expected_ctc: float = 21.0,
+                                 notice_days: int = 30, current_loc: str = "Mumbai") -> bool:
+    """
+    Handle Naukri's post-Apply chatbot panel.
+    After clicking Apply, Naukri may open a chat sidebar with recruiter questions.
+    Supports text input (contenteditable div) and radio button questions.
+    Returns True if application submitted successfully.
+    """
+    # Wait for chatbot drawer to become VISIBLE (element may be in DOM but hidden)
+    chatbot_visible = False
+    for sel in ["div.chatbot_Drawer", "._chatBotContainer", "[class*='chatbot_Drawer']"]:
+        try:
+            await page.wait_for_selector(sel, state="visible", timeout=8000)
+            chatbot_visible = True
+            break
+        except Exception:
+            continue
+    if not chatbot_visible:
+        try:
+            from pathlib import Path as _Path
+            _ss_dir = _Path(__file__).parent / "logs"
+            _ss_dir.mkdir(exist_ok=True)
+            await page.screenshot(path=str(_ss_dir / f"chatbot_miss_{job_title[:20].replace(' ','_')}.png"))
+            log.info(f"Chatbot not found — screenshot saved to logs/")
+        except Exception:
+            pass
+        return False
+
+    log.info(f"Chatbot panel detected for: {job_title}")
+    await page.wait_for_timeout(1500)
+
+    for round_num in range(15):
+        await page.wait_for_timeout(1500)
+
+        # ── Check for success ──────────────────────────────────────────────────
+        try:
+            btn = await page.query_selector("button[class*='apply-button']")
+            if btn and "applied" in (await btn.inner_text()).lower():
+                log.info("Chatbot apply confirmed — button shows Applied")
+                return True
+        except Exception:
+            pass
+        try:
+            msgs = await page.query_selector_all("li.botItem.chatbot_ListItem .botMsg span")
+            if msgs:
+                last = (await msgs[-1].inner_text()).lower()
+                if any(w in last for w in ["applied", "success", "thank you for apply", "submitted"]):
+                    log.info(f"Chatbot success: '{last[:60]}'")
+                    return True
+        except Exception:
+            pass
+
+        # ── Get current question ───────────────────────────────────────────────
+        question_text = ""
+        try:
+            msgs = await page.query_selector_all("li.botItem.chatbot_ListItem .botMsg span")
+            if msgs:
+                question_text = (await msgs[-1].inner_text()).strip()
+        except Exception:
+            pass
+
+        if not question_text:
+            log.debug(f"Chatbot round {round_num}: no question, assuming done")
+            break
+
+        log.info(f"Chatbot Q{round_num}: '{question_text[:80]}'")
+
+        # ── Radio button question ──────────────────────────────────────────────
+        radio_options = await page.query_selector_all("input.ssrc__radio[type='radio']")
+        if radio_options:
+            option_values = []
+            for radio in radio_options:
+                val = await radio.get_attribute("value") or await radio.get_attribute("id") or ""
+                if val:
+                    option_values.append(val)
+
+            log.info(f"Radio options: {option_values}")
+            chosen = _ai_chatbot_answer(ai_client, question_text, option_values, resume_data,
+                                        current_ctc, expected_ctc, notice_days, current_loc)
+            log.info(f"AI chose: '{chosen}'")
+
+            clicked = False
+            # Exact match first
+            for opt_val in option_values:
+                if chosen.strip().lower() == opt_val.strip().lower():
+                    try:
+                        label = await page.query_selector(f'label[for="{opt_val}"]')
+                        if label:
+                            await label.click()
+                            clicked = True
+                            log.info(f"Clicked radio: '{opt_val}'")
+                            break
+                    except Exception:
+                        pass
+
+            # Fuzzy match
+            if not clicked:
+                for opt_val in option_values:
+                    words = [w for w in opt_val.lower().split() if len(w) > 2]
+                    if any(w in chosen.lower() for w in words):
+                        try:
+                            label = await page.query_selector(f'label[for="{opt_val}"]')
+                            if label:
+                                await label.click()
+                                clicked = True
+                                log.info(f"Fuzzy-clicked radio: '{opt_val}'")
+                                break
+                        except Exception:
+                            pass
+
+            # Fallback: Skip
+            if not clicked:
+                try:
+                    skip = await page.query_selector('label[for="Skip this question"]')
+                    if skip:
+                        await skip.click()
+                        clicked = True
+                        log.info("Fallback: clicked Skip this question")
+                except Exception:
+                    pass
+
+            if not clicked:
+                log.warning("Could not click any radio option, stopping")
+                break
+
+            await page.wait_for_timeout(600)
+
+        else:
+            # ── Text input question ────────────────────────────────────────────
+            chat_input = await page.query_selector("div.textArea[contenteditable='true']")
+            if not chat_input:
+                log.warning(f"Round {round_num}: no radio and no text input")
+                break
+
+            answer = _ai_chatbot_answer(ai_client, question_text, [], resume_data,
+                                        current_ctc, expected_ctc, notice_days, current_loc)
+            log.info(f"Chatbot text answer: '{answer}'")
+            await chat_input.click()
+            await page.evaluate("document.querySelector(\"div.textArea[contenteditable='true']\").textContent = ''")
+            await page.keyboard.type(answer)
+            await page.wait_for_timeout(500)
+
+        # ── Click Save (it's a div.sendMsg, not a button) ─────────────────────
+        saved = False
+        for sel in ["div.sendMsg", ".sendMsg"]:
+            try:
+                save_div = await page.query_selector(sel)
+                if save_div and await save_div.is_visible():
+                    await save_div.click()
+                    saved = True
+                    log.info("Clicked Save (div.sendMsg)")
+                    await page.wait_for_timeout(2000)
+                    break
+            except Exception:
+                pass
+
+        if not saved:
+            log.warning("sendMsg Save div not found/not clickable")
+            break
+
+    # Final applied check — wait for Naukri to update state after last Save
+    await page.wait_for_timeout(4000)
+    try:
+        btn = await page.query_selector("button[class*='apply-button']")
+        if btn and "applied" in (await btn.inner_text()).lower():
+            log.info("Chatbot apply confirmed — Apply button changed to Applied")
+            return True
+    except Exception:
+        pass
+    # Also check page body for confirmation text (navigated to success page)
+    try:
+        body = await page.evaluate("document.body.innerText")
+        if any(w in body.lower() for w in ["applied to", "application submitted", "application sent", "you have applied"]):
+            log.info("Chatbot apply confirmed — confirmation text found on page")
+            return True
+    except Exception:
+        pass
+    return False
+
+
 # ── Fill Naukri Easy Apply modal (location / CTC / notice period) ──────────────
 async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
     """
@@ -806,14 +1066,17 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
 
 # ── Apply: NVites inbox flow (click card → Apply button in detail panel) ───────
 async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref,
-                              current_loc: str = "Mumbai"):
+                              current_loc: str = "Mumbai", ai_client=None,
+                              current_ctc: float = 11.15, expected_ctc: float = 21.0,
+                              notice_days: int = 30):
     """
-    Apply to a Naukri NVite by clicking the inbox card and then the Apply button
-    in the detail panel. Used when invite has no direct job URL.
+    Apply to a Naukri NVite by clicking the inbox card and then the Apply button.
+    Handles chatbot apply panel with AI-powered question answering.
     """
     title   = job.get("title", "Unknown")
     company = job.get("company", "Unknown")
     mail_id = job.get("mail_id", "")
+    resume_data = job.get("resume_data", {})
 
     try:
         await page.goto("https://www.naukri.com/mnjuser/inbox",
@@ -823,7 +1086,6 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
         # Find the specific card by data-mailid
         card = await page.query_selector(f"div.card.inbox-company-card[data-mailid='{mail_id}']")
         if not card:
-            # Fallback: try first card if only one invite
             cards = await page.query_selector_all("div.card.inbox-company-card")
             if cards:
                 card = cards[0]
@@ -832,11 +1094,9 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
                 log.warning(f"No inbox cards found for {title} @ {company}")
                 return False
 
-        # Click the card to open detail panel
         await card.click()
         await page.wait_for_timeout(random.randint(1500, 2500))
 
-        # Find Apply button in the detail panel / drawer
         apply_selectors = [
             "button:has-text('Apply Now')",
             "button:has-text('Easy Apply')",
@@ -864,28 +1124,18 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
         await apply_btn.click()
         await page.wait_for_timeout(random.randint(1500, 2500))
 
-        # Fill location / CTC / notice period if modal appears
-        await _handle_easy_apply_modal(page, current_loc)
-        await page.wait_for_timeout(800)
-
-        # Submit
+        # Handle chatbot apply panel
         submitted = False
-        for sel in ["button:has-text('Submit Application')", "button:has-text('Submit')"]:
-            try:
-                btn = await page.query_selector(sel)
-                if btn and await btn.is_visible():
-                    await btn.click()
-                    await page.wait_for_timeout(1500)
-                    submitted = True
-                    break
-            except Exception:
-                continue
-
+        if ai_client:
+            submitted = await _handle_chatbot_apply(
+                page, ai_client, resume_data, job_title=f"{title} @ {company}",
+                current_ctc=current_ctc, expected_ctc=expected_ctc,
+                notice_days=notice_days, current_loc=current_loc,
+            )
         if not submitted:
-            # Some NVite apply flows have no submit modal — check for confirmation
             try:
-                conf = await page.query_selector("button:has-text('Applied'), .applied-text")
-                if conf:
+                btn = await page.query_selector("button[class*='apply-button']")
+                if btn and "applied" in (await btn.inner_text()).lower():
                     submitted = True
             except Exception:
                 pass
@@ -916,12 +1166,15 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
 
 # ── Apply ──────────────────────────────────────────────────────────────────────
 async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_pref,
-                     current_loc: str = "Mumbai", is_hr_invite: bool = False):
+                     current_loc: str = "Mumbai", is_hr_invite: bool = False,
+                     ai_client=None, current_ctc: float = 11.15,
+                     expected_ctc: float = 21.0, notice_days: int = 30):
     """
-    Navigate to the job URL and click Apply on Naukri (Easy Apply flow).
-    Falls back gracefully if the apply button is not found or already applied.
+    Navigate to the job URL and click Apply on Naukri.
+    Handles Naukri's chatbot-style apply panel (questions answered by Claude AI).
+    Falls back gracefully if apply button not found or already applied.
     """
-    url = job.get("url", "")
+    url     = job.get("url", "")
     title   = job.get("title", "Unknown")
     company = job.get("company", "Unknown")
 
@@ -930,17 +1183,19 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
             log.warning(f"No URL for {title} @ {company} — skipping apply")
             return False
 
-        # ── Special flow: NVites inbox invites (no direct URL, click card first) ──
+        # ── Special flow: NVites inbox invites ────────────────────────────────
         mail_id = job.get("mail_id", "")
         if is_hr_invite and mail_id and "mnjuser/inbox" in url:
-            return await _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref, current_loc)
+            return await _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref,
+                                             current_loc, ai_client=ai_client,
+                                             current_ctc=current_ctc, expected_ctc=expected_ctc,
+                                             notice_days=notice_days)
 
         await page.goto(url, wait_until="domcontentloaded", timeout=25000)
         await page.wait_for_timeout(random.randint(2000, 3000))
 
         # ── Step 1: Find and click the main Apply button ───────────────────────
         apply_selectors = [
-            "button.styles_apply-button__N2-qy",   # Naukri 2024 class
             "button[class*='apply-button']",
             "a[class*='apply-button']",
             ".applyButton",
@@ -968,54 +1223,44 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
             log.warning(f"Apply button not found — {title} @ {company}")
             return False
 
+        log.info(f"Attempting apply: {title} @ {company}")
         await apply_btn.click()
-        await page.wait_for_timeout(random.randint(1500, 2500))
+        await page.wait_for_timeout(random.randint(3000, 4000))  # chatbot needs time to init
 
-        # ── Step 2: Fill Easy Apply modal fields (location, CTC, notice period) ─
-        modal_present = await _handle_easy_apply_modal(page, current_loc)
-        await page.wait_for_timeout(random.randint(800, 1200))
-
-        # ── Step 3: Submit the application ─────────────────────────────────────
-        # Only use unambiguous submit selectors — NOT 'Apply' (would re-click apply btn)
-        submitted = False
-        submit_selectors = [
-            "button:has-text('Submit Application')",
-            "button:has-text('Submit')",
-            "button[class*='submit' i]:not([class*='apply-button'])",
-        ]
-        for sel in submit_selectors:
-            try:
-                submit_btn = await page.query_selector(sel)
-                if submit_btn and await submit_btn.is_visible():
-                    await submit_btn.click()
-                    await page.wait_for_timeout(2000)
-                    submitted = True
-                    log.info(f"Submitted application — {title} @ {company}")
-                    break
-            except Exception:
-                continue
-
-        # If no modal appeared and apply btn was clicked, treat as submitted
-        # (some Naukri jobs apply directly on click with no modal)
-        if not submitted and not modal_present:
-            # Verify by checking if apply button now shows "Applied"
-            try:
-                applied_check = await page.query_selector(
-                    "button:has-text('Applied'), [class*='applied'], .applied-text"
-                )
-                if applied_check:
-                    submitted = True
-                    log.info(f"Direct apply confirmed (no modal) — {title} @ {company}")
-                else:
-                    log.warning(f"Apply clicked but no confirmation found — {title} @ {company}")
-            except Exception:
-                pass
+        # ── Step 2: Handle chatbot apply panel (AI-powered) ────────────────────
+        if ai_client:
+            submitted = await _handle_chatbot_apply(
+                page, ai_client, resume_data, job_title=f"{title} @ {company}",
+                current_ctc=current_ctc, expected_ctc=expected_ctc,
+                notice_days=notice_days, current_loc=current_loc,
+            )
+            if submitted:
+                log.info(f"Chatbot apply done — {title} @ {company}")
+            else:
+                # Chatbot didn't appear or didn't submit — check direct-apply or page confirmation
+                try:
+                    btn = await page.query_selector("button[class*='apply-button']")
+                    if btn and "applied" in (await btn.inner_text()).lower():
+                        submitted = True
+                        log.info(f"Direct apply confirmed — {title} @ {company}")
+                except Exception:
+                    pass
+                if not submitted:
+                    try:
+                        body = await page.evaluate("document.body.innerText")
+                        if any(w in body.lower() for w in ["applied to", "application submitted", "you have applied"]):
+                            submitted = True
+                            log.info(f"Direct apply confirmed via page text — {title} @ {company}")
+                    except Exception:
+                        pass
+        else:
+            submitted = False
 
         if not submitted:
-            log.warning(f"Submit not confirmed — marking as not applied: {title} @ {company}")
+            log.warning(f"Apply not confirmed — {title} @ {company}")
             return False
 
-        # ── Step 4: Webhook notification (Make.com / n8n) ──────────────────────
+        # ── Step 3: Webhook notification ────────────────────────────────────────
         if make_webhook:
             try:
                 requests.post(make_webhook, json={
