@@ -1,5 +1,5 @@
 """
-CareerOS Job Applier — Local Runner
+CareerOS Job Applier â€” Local Runner
 Run locally so your residential IP bypasses Naukri's bot detection.
 Schedule via Windows Task Scheduler.
 """
@@ -10,12 +10,13 @@ import requests
 import logging
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote_plus
 from cryptography.fernet import Fernet
 
 import anthropic
 from playwright.async_api import async_playwright
 
-# ntfy notifications (inline — no CareerOS module import needed in local runner)
+# ntfy notifications (inline â€” no CareerOS module import needed in local runner)
 import hashlib
 
 def _ntfy_topic(email: str) -> str:
@@ -37,11 +38,11 @@ def _sync_results(email: str, results: dict,
                   sync_url: str = "") -> None:
     """
     Push run results to CareerOS web app.
-    Mode 1 (preferred): Supabase — direct DB write, bypasses Streamlit auth gate.
-    Mode 2 (legacy):    api_ingest URL — blocked by Streamlit Google OAuth.
+    Mode 1 (preferred): Supabase â€” direct DB write, bypasses Streamlit auth gate.
+    Mode 2 (legacy):    api_ingest URL â€” blocked by Streamlit Google OAuth.
     Mode 3 (dev):       Same-machine local file write.
     """
-    # ── Mode 1: Supabase ──────────────────────────────────────────────────────
+    # â”€â”€ Mode 1: Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if supabase_url and supabase_key:
         try:
             headers = {
@@ -93,7 +94,7 @@ def _sync_results(email: str, results: dict,
             log.warning(f"Supabase sync failed (non-fatal): {e}")
         return
 
-    # ── Mode 2: api_ingest URL (legacy) ───────────────────────────────────────
+    # â”€â”€ Mode 2: api_ingest URL (legacy) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if sync_url:
         try:
             import base64 as _b64
@@ -109,7 +110,7 @@ def _sync_results(email: str, results: dict,
             log.warning(f"Cloud sync failed (non-fatal): {e}")
         return
 
-    # ── Mode 2: Same-machine local sync ───────────────────────────────────────
+    # â”€â”€ Mode 2: Same-machine local sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Only works when web app and runner are on the same PC.
     # Tries common paths: same folder, one level up, two levels up.
     user_id = hashlib.md5(email.lower().encode()).hexdigest()[:12]
@@ -134,12 +135,12 @@ def _sync_results(email: str, results: dict,
             invites.insert(0, inv)
         inv_file.write_text(json.dumps(invites[:50], indent=2, ensure_ascii=False), encoding="utf-8")
 
-        log.info(f"Results synced locally → {data_dir}")
+        log.info(f"Results synced locally â†’ {data_dir}")
     except Exception as e:
         log.warning(f"Local sync failed (non-fatal): {e}")
 
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CONFIG_FILE = Path(__file__).parent / "config.json"
 LOG_FILE    = Path(__file__).parent / "logs" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 LOG_FILE.parent.mkdir(exist_ok=True)
@@ -155,7 +156,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# â”€â”€ Entry point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def main():
     LOG_FILE.parent.mkdir(exist_ok=True)
 
@@ -163,10 +164,10 @@ async def main():
         log.error(f"config.json not found at {CONFIG_FILE}")
         return
 
-    with open(CONFIG_FILE, encoding="utf-8") as f:
+    with open(CONFIG_FILE, encoding="utf-8-sig") as f:
         inp = json.load(f)
 
-    # ── Decrypt password ───────────────────────────────────────────────────────
+    # â”€â”€ Decrypt password â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     fernet_key   = inp.get("fernet_key", "")
     pass_enc     = inp.get("naukri_pass_enc", "")
     naukri_email = inp.get("naukri_email", "")
@@ -181,20 +182,26 @@ async def main():
         log.error(f"Decryption failed: {e}")
         return
 
-    # ── Params ─────────────────────────────────────────────────────────────────
+    # â”€â”€ Params â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     resume_data   = inp.get("resume_data", {})
     target_role   = resume_data.get("target_title", "Business Analyst")
     domain_family = resume_data.get("domain_family", "enterprise_IT")
-    locations     = inp.get("preferred_locations", ["Pune"])
-    current_loc   = inp.get("current_location", locations[0] if locations else "Mumbai")
-    salary_min    = inp.get("salary_min", 0)
-    max_apply     = inp.get("max_jobs_per_run", 5)
+    locations      = inp.get("preferred_locations", ["Pune"])
+    current_loc    = inp.get("current_location", locations[0] if locations else "Mumbai")
+    salary_min     = inp.get("salary_min", 0)
+    max_apply      = inp.get("max_jobs_per_run", 5)
+    max_jobs_scan  = max(max_apply, inp.get("max_jobs_to_scan", 60))
+    exp_min_cfg    = int(inp.get("exp_min", 0) or 0)
+    title_limit    = max(1, int(inp.get("search_titles_per_run", 4) or 4))
+    location_limit = max(1, int(inp.get("search_locations_per_run", 3) or 3))
 
     exp_years = sum(
         _parse_years(job.get("period", ""))
         for job in resume_data.get("experience", [])
     )
     exp_years = max(1, min(exp_years, 20))
+    exp_min   = max(exp_min_cfg, max(0, exp_years - 2))
+    exp_max   = max(exp_years + 2, exp_min + 2)
 
     ai_client     = anthropic.Anthropic(api_key=inp.get("anthropic_key", ""))
     make_webhook  = inp.get("make_webhook_url", "")
@@ -220,24 +227,28 @@ async def main():
         "errors":            [],
     }
 
-    # ── Search URL ─────────────────────────────────────────────────────────────
-    role_slug     = target_role.lower().replace(" ", "-")
-    location      = locations[0] if locations else "pune"
-    location_slug = location.lower().replace(" ", "-")
-    search_url = (
-        f"https://www.naukri.com/{role_slug}-jobs-in-{location_slug}"
-        f"?experienceMin={max(0, exp_years - 2)}&experienceMax={exp_years + 2}"
+    # â”€â”€ Search URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    search_plans = _build_search_plans(
+        target_role=target_role,
+        alt_titles=alt_titles,
+        locations=locations,
+        exp_min=exp_min,
+        exp_max=exp_max,
+        salary_min=salary_min,
+        title_limit=title_limit,
+        location_limit=location_limit,
     )
-    if salary_min:
-        search_url += f"&salary={salary_min * 100000}"
 
-    log.info(f"Target: {target_role} | Location: {location} | Exp: {exp_years-2}–{exp_years+2} yrs")
-    log.info(f"Search URL: {search_url}")
+    primary_location = locations[0] if locations else "Pune"
+    log.info(f"Target: {target_role} | Primary location: {primary_location} | Exp: {exp_min}-{exp_max} yrs")
+    log.info(f"Search breadth: {len(search_plans)} query combination(s), scan cap {max_jobs_scan}, apply cap {max_apply}")
+    for plan in search_plans:
+        log.info(f"Search plan: {plan['title']} | {plan['location']} | {plan['url']}")
 
-    # ── Browser ────────────────────────────────────────────────────────────────
+    # â”€â”€ Browser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async with async_playwright() as pw:
         headless = inp.get("headless", True)  # True = service/scheduled mode, False = debug
-        # Use real Chrome (channel="chrome") in headless mode — Naukri blocks Playwright Chromium.
+        # Use real Chrome (channel="chrome") in headless mode â€” Naukri blocks Playwright Chromium.
         # Falls back to Chromium if Chrome is not installed (headless=False debug mode).
         import shutil
         use_chrome = headless and shutil.which("chrome") or (
@@ -270,19 +281,19 @@ async def main():
         jobs        = []
         hr_invites  = []
         if logged_in:
-            # ── P1: Check recruiter inbox FIRST (highest priority) ─────────
+            # â”€â”€ P1: Check recruiter inbox FIRST (highest priority) â”€â”€â”€â”€â”€â”€â”€â”€â”€
             log.info("Checking Naukri recruiter inbox...")
             hr_invites = await _scrape_recruiter_inbox(page, results)
             results["hr_invites_found"] = len(hr_invites)
             if hr_invites:
-                log.info(f"Found {len(hr_invites)} HR invite(s) — processing as P1")
+                log.info(f"Found {len(hr_invites)} HR invite(s) â€” processing as P1")
 
-            # ── P2: Regular job search ─────────────────────────────────────
-            jobs = await _scrape_job_listings(page, search_url, results)
+            # â”€â”€ P2: Regular job search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            jobs = await _collect_jobs_for_search_plans(page, search_plans, results, max_jobs_scan)
             results["jobs_found"] = len(jobs)
-            log.info(f"Found {len(jobs)} jobs")
+            log.info(f"Collected {len(jobs)} unique jobs across all search plans")
 
-        # ── Process HR invites (P1 — always process, no cap) ─────────────────
+        # â”€â”€ Process HR invites (P1 â€” always process, no cap) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         for invite in hr_invites:
             matched, reason = _domain_match(ai_client, invite, resume_data, domain_family, alt_titles)
             invite_record = {
@@ -308,12 +319,12 @@ async def main():
                 _notify_hr_invite(make_webhook, invite, applied, notif_contact, notif_pref,
                                   user_email=inp.get("user_email", naukri_email))
             else:
-                log.info(f"HR-INVITE SKIP  {invite.get('title')} @ {invite.get('company')} — {reason}")
+                log.info(f"HR-INVITE SKIP  {invite.get('title')} @ {invite.get('company')} â€” {reason}")
 
             results["hr_invites"].append(invite_record)
             await asyncio.sleep(random.uniform(2, 4))
 
-        # ── Process jobs ───────────────────────────────────────────────────────
+        # â”€â”€ Process jobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         for job in jobs:
             if results["jobs_applied"] >= max_apply:
                 break
@@ -324,7 +335,7 @@ async def main():
                 results["skipped_list"].append({
                     "title": job.get("title"), "company": job.get("company"), "reason": reason
                 })
-                log.info(f"SKIP  {job.get('title')} @ {job.get('company')} — {reason}")
+                log.info(f"SKIP  {job.get('title')} @ {job.get('company')} â€” {reason}")
                 continue
 
             results["jobs_matched"] += 1
@@ -347,12 +358,12 @@ async def main():
 
         await browser.close()
 
-    # ── Save results locally ────────────────────────────────────────────────────
+    # â”€â”€ Save results locally â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     results_file = Path(__file__).parent / "logs" / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
-    # ── Sync results to web app (cloud or local) ─────────────────────────────────
+    # â”€â”€ Sync results to web app (cloud or local) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     _sync_results(
         email        = inp.get("user_email", naukri_email),
         results      = results,
@@ -362,14 +373,14 @@ async def main():
     )
 
     log.info(
-        f"Done — HR invites: {results['hr_invites_found']} found, "
+        f"Done â€” HR invites: {results['hr_invites_found']} found, "
         f"{results['hr_invites_applied']} applied | "
         f"Jobs: {results['jobs_found']} found, "
         f"{results['jobs_matched']} matched, "
         f"{results['jobs_applied']} applied"
     )
 
-    # ── Push notification via ntfy ─────────────────────────────────────────────
+    # â”€â”€ Push notification via ntfy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ntfy_topic = _ntfy_topic(inp.get("user_email", naukri_email))
     hr_count   = results.get("hr_invites_applied", 0)
     parts      = [f"Jobs scanned: {results['jobs_found']}",
@@ -380,8 +391,25 @@ async def main():
           priority="low", tags=["white_check_mark"])
 
 
-# ── Login ──────────────────────────────────────────────────────────────────────
+# â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _login_naukri(page, email: str, password: str, results: dict) -> bool:
+    login_debug_dir = Path(__file__).parent / "logs"
+    login_debug_dir.mkdir(exist_ok=True)
+
+    async def _save_login_debug(prefix: str):
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        shot_path = login_debug_dir / f"{prefix}_{stamp}.png"
+        html_path = login_debug_dir / f"{prefix}_{stamp}.html"
+        try:
+            await page.screenshot(path=str(shot_path), full_page=True)
+        except Exception as shot_err:
+            log.warning(f"Could not save login screenshot: {shot_err}")
+        try:
+            html_path.write_text(await page.content(), encoding="utf-8")
+        except Exception as html_err:
+            log.warning(f"Could not save login HTML dump: {html_err}")
+        return shot_path, html_path
+
     try:
         log.info("Opening Naukri login page...")
         await page.goto("https://www.naukri.com/nlogin/login",
@@ -398,30 +426,148 @@ async def _login_naukri(page, email: str, password: str, results: dict) -> bool:
 
         log.info("Clicking Login...")
         await page.click("button:has-text('Login')", timeout=5000)
-        await page.wait_for_load_state("networkidle", timeout=20000)
-        await page.wait_for_timeout(2000)
 
-        if "nlogin" not in page.url.lower():
-            log.info(f"✅ Login successful — {page.url}")
-            return True
-        else:
-            log.error(f"Login failed — still on login page: {page.url}")
-            results["errors"].append(f"Login failed — URL: {page.url}")
-            return False
+        login_success_selectors = [
+            "div.nI-gNb-drawer",
+            "div.view-profile-wrapper",
+            "a[href*='mnjuser/profile']",
+            "a[title*='View profile' i]",
+            "a[href*='/mnjuser/homepage']",
+        ]
+        login_issue_selectors = [
+            "iframe[title*='captcha' i]",
+            "iframe[src*='captcha']",
+            "div.captcha",
+            "div.server-err",
+            "div.formError",
+            "span.error",
+            "div[class*='error']",
+            "input[autocomplete='one-time-code']",
+            "input[name*='otp' i]",
+        ]
 
-    except Exception as e:
-        log.error(f"Login error: {e}")
-        results["errors"].append(f"Login error: {str(e)[:200]}")
+        for _ in range(15):
+            await page.wait_for_timeout(1000)
+            current_url = (page.url or "").lower()
+            if "nlogin" not in current_url and "login" not in current_url:
+                log.info(f"Login successful via URL change - {page.url}")
+                return True
+
+            for sel in login_success_selectors:
+                try:
+                    if await page.locator(sel).first.is_visible(timeout=250):
+                        log.info(f"Login successful via selector {sel} - {page.url}")
+                        return True
+                except Exception:
+                    continue
+
+        issue_text = ""
+        for sel in login_issue_selectors:
+            try:
+                locator = page.locator(sel).first
+                if await locator.is_visible(timeout=250):
+                    try:
+                        issue_text = (await locator.inner_text(timeout=500)).strip()
+                    except Exception:
+                        issue_text = sel
+                    break
+            except Exception:
+                continue
+
+        shot_path, html_path = await _save_login_debug("login_failure")
+        message = f"Login failed - still on login page: {page.url}"
+        if issue_text:
+            message += f" | issue: {issue_text[:200]}"
+        message += f" | screenshot: {shot_path.name} | html: {html_path.name}"
+        log.error(message)
+        results["errors"].append(message)
         return False
 
+    except Exception as e:
+        shot_path, html_path = await _save_login_debug("login_error")
+        message = f"Login error: {str(e)[:200]} | screenshot: {shot_path.name} | html: {html_path.name}"
+        log.error(message)
+        results["errors"].append(message)
+        return False
 
-# ── Scrape ─────────────────────────────────────────────────────────────────────
-async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
+def _slugify_search_term(value: str) -> str:
+    cleaned = " ".join((value or "").strip().lower().split())
+    return quote_plus(cleaned.replace("/", " ")).replace("+", "-")
+
+
+def _build_search_url(title: str, location: str, exp_min: int, exp_max: int, salary_min: int) -> str:
+    title_slug = _slugify_search_term(title)
+    location_slug = _slugify_search_term(location or "india")
+    url = (
+        f"https://www.naukri.com/{title_slug}-jobs-in-{location_slug}"
+        f"?experienceMin={exp_min}&experienceMax={exp_max}"
+    )
+    if salary_min:
+        url += f"&salary={int(salary_min) * 100000}"
+    return url
+
+
+def _build_search_plans(target_role: str, alt_titles: list, locations: list, exp_min: int, exp_max: int,
+                        salary_min: int, title_limit: int, location_limit: int) -> list:
+    seen_titles = set()
+    ordered_titles = []
+    for title in [target_role] + [t for t in alt_titles if t]:
+        title = (title or "").strip()
+        if not title:
+            continue
+        key = title.lower()
+        if key not in seen_titles:
+            seen_titles.add(key)
+            ordered_titles.append(title)
+    ordered_titles = ordered_titles[:title_limit]
+
+    seen_locations = set()
+    ordered_locations = []
+    for location in locations or ["Remote"]:
+        location = (location or "").strip()
+        if not location:
+            continue
+        key = location.lower()
+        if key not in seen_locations:
+            seen_locations.add(key)
+            ordered_locations.append(location)
+    ordered_locations = ordered_locations[:location_limit] or ["Remote"]
+
+    plans = []
+    seen_urls = set()
+    for title in ordered_titles:
+        for location in ordered_locations:
+            url = _build_search_url(title, location, exp_min, exp_max, salary_min)
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            plans.append({"title": title, "location": location, "url": url})
+    return plans
+
+
+async def _collect_jobs_for_search_plans(page, search_plans: list, results: dict, max_jobs_to_scan: int) -> list:
     jobs = []
+    seen_jobs = set()
+    for plan in search_plans:
+        if len(jobs) >= max_jobs_to_scan:
+            break
+        remaining = max_jobs_to_scan - len(jobs)
+        plan_jobs = await _scrape_job_listings(page, plan["url"], results, seen_jobs=seen_jobs, limit=min(remaining, 25))
+        for job in plan_jobs:
+            job.setdefault("search_title", plan["title"])
+            job.setdefault("search_location", plan["location"])
+            jobs.append(job)
+            if len(jobs) >= max_jobs_to_scan:
+                break
+    return jobs
+
+async def _scrape_job_listings(page, search_url: str, results: dict, seen_jobs=None, limit: int = 25) -> list:
+    jobs = []
+    seen_jobs = seen_jobs if seen_jobs is not None else set()
     try:
         log.info(f"Navigating to search URL...")
         await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(random.randint(4000, 5000))  # SPA needs extra render time
+        await page.wait_for_timeout(random.randint(4000, 5000))
 
         cards = await page.query_selector_all(
             "div.srp-jobtuple-wrapper, div.cust-job-tuple, "
@@ -429,27 +575,30 @@ async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
         )
         log.info(f"Found {len(cards)} job cards")
 
-        for card in cards[:25]:
+        for card in cards[:40]:
+            if len(jobs) >= limit:
+                break
             try:
                 title_el   = await card.query_selector("a.title, a[class*='title']")
                 company_el = await card.query_selector("a.comp-name, a[class*='comp-name']")
                 desc_el    = await card.query_selector("span.job-desc, ul.tags-gt, div[class*='desc']")
                 apply_el   = await card.query_selector("button[class*='apply'], a[class*='apply']")
+                meta_el    = await card.query_selector("span.job-post-day, span[class*='posting']")
 
                 title   = (await title_el.inner_text()).strip()   if title_el   else ""
                 company = (await company_el.inner_text()).strip() if company_el else ""
                 desc    = (await desc_el.inner_text()).strip()     if desc_el    else ""
                 url     = await title_el.get_attribute("href")    if title_el   else ""
+                meta    = (await meta_el.inner_text()).strip()     if meta_el else ""
 
                 if not title:
                     continue
 
-                # Clean company name — strip ratings, reviews, newlines
                 company = company.split("\n")[0].strip()
-
-                # Deduplicate by (title, company)
-                if any(j["title"] == title and j["company"] == company for j in jobs):
+                dedupe_key = (title.lower(), company.lower())
+                if dedupe_key in seen_jobs:
                     continue
+                seen_jobs.add(dedupe_key)
 
                 apply_text    = (await apply_el.inner_text()).lower() if apply_el else ""
                 is_easy_apply = "apply" in apply_text and "external" not in apply_text
@@ -458,6 +607,7 @@ async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
                     "title": title, "company": company,
                     "description": desc, "url": url,
                     "is_easy_apply": is_easy_apply,
+                    "posted_meta": meta,
                 })
                 log.info(f"  Job: {title} @ {company}")
 
@@ -471,7 +621,7 @@ async def _scrape_job_listings(page, search_url: str, results: dict) -> list:
     return jobs
 
 
-# ── Domain match (research-backed Indian job market scorer) ────────────────────
+# â”€â”€ Domain match (research-backed Indian job market scorer) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _domain_match(client, job, resume_data, domain_family, alt_titles=None):
     title   = job.get("title", "")
     company = job.get("company", "")
@@ -497,7 +647,7 @@ CANDIDATE:
 - Skills: {skills}
 - Background: {summary[:300]}
 
-HARD REJECT — answer false if ANY applies:
+HARD REJECT â€” answer false if ANY applies:
 - Job age > 21 days (stale posting)
 - Seniority wrong: VP/Director/Head/C-Level OR Junior/Fresher/0-2 yrs required
 - Wrong function: Software Engineer, Developer, QA, HR, Finance, Marketing, Sales, Data Scientist
@@ -509,7 +659,7 @@ APPLY if the role matches ANY of the candidate's acceptable titles or is a natur
 
 MATCH SIGNALS:
 - Title is any of: {all_titles} or a very close variant
-- Domain overlaps (same industry or adjacent — enterprise IT, automotive, product, SaaS all OK)
+- Domain overlaps (same industry or adjacent â€” enterprise IT, automotive, product, SaaS all OK)
 - Experience band fits (within 2-3 years)
 - Program/project delivery, stakeholder management, or Agile skills appear in JD
 
@@ -520,7 +670,7 @@ Age: {age} days old
 Description: {jd[:800]}
 
 Reply ONLY JSON (no markdown):
-{{"match": true/false, "score": <0-100>, "reason": "<one line — specific factor>"}}"""
+{{"match": true/false, "score": <0-100>, "reason": "<one line â€” specific factor>"}}"""
 
     try:
         resp = client.messages.create(
@@ -536,7 +686,7 @@ Reply ONLY JSON (no markdown):
         return False, f"Error: {e}"
 
 
-# ── Tailor resume ──────────────────────────────────────────────────────────────
+# â”€â”€ Tailor resume â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _tailor_resume(client, job, resume_data):
     prompt = f"""Job: {job.get('title')} at {job.get('company')}
 JD: {job.get('description', '')[:600]}
@@ -559,7 +709,7 @@ Reply ONLY JSON: {{"tailored_summary": "...", "tailored_keywords": ["kw1",...]}}
         return resume_data
 
 
-# ── Recruiter inbox scraper ────────────────────────────────────────────────────
+# â”€â”€ Recruiter inbox scraper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _scrape_recruiter_inbox(page, results: dict) -> list:
     """
     Scrape Naukri's recruiter activities / messages section for HR invites.
@@ -567,15 +717,15 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
     """
     invites = []
 
-    # ── Primary: NVites dedicated inbox page ──────────────────────────────────
+    # â”€â”€ Primary: NVites dedicated inbox page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # URL:     https://www.naukri.com/mnjuser/inbox
     # Card:    div.card.inbox-company-card
     # Title:   span.title  (or span.ellipsis.title)
-    # Company: span.comp-name  (may be "Hiring for X" — strip that prefix)
+    # Company: span.comp-name  (may be "Hiring for X" â€” strip that prefix)
     # Recruiter: span.posted-by-txt  (e.g. "Posted by I Square Tek")
     # Date:    span.date-time-wrap
     # Key:     data-mailid attribute (used to re-find the card for applying)
-    # Note:    Cards have no <a href> — apply by clicking card → Apply button in panel
+    # Note:    Cards have no <a href> â€” apply by clicking card â†’ Apply button in panel
     try:
         await page.goto("https://www.naukri.com/mnjuser/inbox",
                         wait_until="domcontentloaded", timeout=20000)
@@ -634,7 +784,7 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
         log.warning(f"NVites inbox check failed: {e}")
         results["errors"].append(f"NVites inbox error: {str(e)[:150]}")
 
-    # ── Fallback: homepage power-invite-card widget ────────────────────────────
+    # â”€â”€ Fallback: homepage power-invite-card widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if not invites:
         try:
             await page.goto("https://www.naukri.com/mnjuser/homepage",
@@ -669,15 +819,15 @@ async def _scrape_recruiter_inbox(page, results: dict) -> list:
     return invites
 
 
-# ── HR invite instant notification ────────────────────────────────────────────
+# â”€â”€ HR invite instant notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
                       contact: str, notif_pref: str, user_email: str = ""):
     """Instant push notification (ntfy) when an HR invite is detected."""
     topic  = _ntfy_topic(user_email or contact)
-    status = "Auto-applied by CareerOS" if applied else "Reviewed — not a strong match"
+    status = "Auto-applied by CareerOS" if applied else "Reviewed â€” not a strong match"
     _ntfy(
         topic     = topic,
-        title     = f"HR Invite — {invite.get('company', 'Unknown')}",
+        title     = f"HR Invite â€” {invite.get('company', 'Unknown')}",
         message   = (
             f"Role: {invite.get('title', 'Unknown')}\n"
             f"HR: {invite.get('hr_name', 'Unknown')}\n"
@@ -690,12 +840,12 @@ def _notify_hr_invite(make_webhook: str, invite: dict, applied: bool,
     log.info(f"ntfy notification sent for HR invite from {invite.get('company')}")
 
 
-# ── AI-powered chatbot question answering ──────────────────────────────────────
+# â”€â”€ AI-powered chatbot question answering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _ai_chatbot_answer(client, question: str, options: list, resume_data: dict,
                         current_ctc: float, expected_ctc: float,
                         notice_days: int, location: str) -> str:
     """Use Claude Haiku to answer a Naukri chatbot apply question."""
-    opts_str = "\n".join(f"- {o}" for o in options) if options else "(free text — short answer)"
+    opts_str = "\n".join(f"- {o}" for o in options) if options else "(free text â€” short answer)"
 
     prompt = f"""You are filling a Naukri job application chatbot for this candidate:
 - Experience: 8 years in IT program/project management
@@ -713,17 +863,17 @@ CHATBOT QUESTION: "{question}"
 {opts_str}
 
 Rules:
-- For "current CTC" → reply "{current_ctc}"
-- For "expected CTC" → reply "{expected_ctc}"
-- For "notice period" or "joining time" → reply "{notice_days}"
-- For "years of experience": pick the highest option that is ≤ 8; if all options exceed 8 pick lowest; if no numeric option pick "Skip this question"
-- For location → reply "{location}"
-- For yes/no willingness/interest questions → reply "Yes"
-- For "residing in" location questions → reply "Yes"
+- For "current CTC" â†’ reply "{current_ctc}"
+- For "expected CTC" â†’ reply "{expected_ctc}"
+- For "notice period" or "joining time" â†’ reply "{notice_days}"
+- For "years of experience": pick the highest option that is â‰¤ 8; if all options exceed 8 pick lowest; if no numeric option pick "Skip this question"
+- For location â†’ reply "{location}"
+- For yes/no willingness/interest questions â†’ reply "Yes"
+- For "residing in" location questions â†’ reply "Yes"
 - If question asks about a specific tech skill the candidate lacks (e.g. Java, .NET, Oracle, Python, Coding): reply "0" for free text OR pick "Skip this question" if available
 - For years-of-experience free text: reply with a single number like "5" or "8" (no "years" suffix)
 - For options list: reply with the EXACT option text (copy exactly, case-sensitive)
-- For free text: reply with a SHORT, direct answer — single word or number preferred
+- For free text: reply with a SHORT, direct answer â€” single word or number preferred
 
 Reply with ONLY the answer, no explanation."""
     try:
@@ -754,7 +904,7 @@ Reply with ONLY the answer, no explanation."""
         return "8"
 
 
-# ── Naukri chatbot apply handler ────────────────────────────────────────────────
+# â”€â”€ Naukri chatbot apply handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: str = "",
                                  current_ctc: float = 11.15, expected_ctc: float = 21.0,
                                  notice_days: int = 30, current_loc: str = "Mumbai") -> bool:
@@ -779,7 +929,7 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
             _ss_dir = _Path(__file__).parent / "logs"
             _ss_dir.mkdir(exist_ok=True)
             await page.screenshot(path=str(_ss_dir / f"chatbot_miss_{job_title[:20].replace(' ','_')}.png"))
-            log.info(f"Chatbot not found — screenshot saved to logs/")
+            log.info(f"Chatbot not found â€” screenshot saved to logs/")
         except Exception:
             pass
         return False
@@ -790,11 +940,11 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
     for round_num in range(15):
         await page.wait_for_timeout(1500)
 
-        # ── Check for success ──────────────────────────────────────────────────
+        # â”€â”€ Check for success â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         try:
             btn = await page.query_selector("button[class*='apply-button']")
             if btn and "applied" in (await btn.inner_text()).lower():
-                log.info("Chatbot apply confirmed — button shows Applied")
+                log.info("Chatbot apply confirmed â€” button shows Applied")
                 return True
         except Exception:
             pass
@@ -808,7 +958,7 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
         except Exception:
             pass
 
-        # ── Get current question ───────────────────────────────────────────────
+        # â”€â”€ Get current question â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         question_text = ""
         try:
             msgs = await page.query_selector_all("li.botItem.chatbot_ListItem .botMsg span")
@@ -823,7 +973,7 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
 
         log.info(f"Chatbot Q{round_num}: '{question_text[:80]}'")
 
-        # ── Radio button question ──────────────────────────────────────────────
+        # â”€â”€ Radio button question â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         radio_options = await page.query_selector_all("input.ssrc__radio[type='radio']")
         if radio_options:
             option_values = []
@@ -884,7 +1034,7 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
             await page.wait_for_timeout(600)
 
         else:
-            # ── Text input question ────────────────────────────────────────────
+            # â”€â”€ Text input question â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             chat_input = await page.query_selector("div.textArea[contenteditable='true']")
             if not chat_input:
                 log.warning(f"Round {round_num}: no radio and no text input")
@@ -898,7 +1048,7 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
             await page.keyboard.type(answer)
             await page.wait_for_timeout(500)
 
-        # ── Click Save (it's a div.sendMsg, not a button) ─────────────────────
+        # â”€â”€ Click Save (it's a div.sendMsg, not a button) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         saved = False
         for sel in ["div.sendMsg", ".sendMsg"]:
             try:
@@ -916,12 +1066,12 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
             log.warning("sendMsg Save div not found/not clickable")
             break
 
-    # Final applied check — wait for Naukri to update state after last Save
+    # Final applied check â€” wait for Naukri to update state after last Save
     await page.wait_for_timeout(4000)
     try:
         btn = await page.query_selector("button[class*='apply-button']")
         if btn and "applied" in (await btn.inner_text()).lower():
-            log.info("Chatbot apply confirmed — Apply button changed to Applied")
+            log.info("Chatbot apply confirmed â€” Apply button changed to Applied")
             return True
     except Exception:
         pass
@@ -929,14 +1079,14 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
     try:
         body = await page.evaluate("document.body.innerText")
         if any(w in body.lower() for w in ["applied to", "application submitted", "application sent", "you have applied"]):
-            log.info("Chatbot apply confirmed — confirmation text found on page")
+            log.info("Chatbot apply confirmed â€” confirmation text found on page")
             return True
     except Exception:
         pass
     return False
 
 
-# ── Fill Naukri Easy Apply modal (location / CTC / notice period) ──────────────
+# â”€â”€ Fill Naukri Easy Apply modal (location / CTC / notice period) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
     """
     After clicking Apply/Easy Apply on Naukri, a modal may appear asking for:
@@ -951,7 +1101,7 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
     try:
         await page.wait_for_timeout(1000)
 
-        # ── Current location typeahead ─────────────────────────────────────────
+        # â”€â”€ Current location typeahead â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         loc_selectors = [
             "input[placeholder*='current city' i]",
             "input[placeholder*='Current City' i]",
@@ -996,7 +1146,7 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
             except Exception:
                 continue
 
-        # ── Current CTC ────────────────────────────────────────────────────────
+        # â”€â”€ Current CTC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ctc_selectors = [
             "input[placeholder*='current ctc' i]",
             "input[placeholder*='Current CTC' i]",
@@ -1018,7 +1168,7 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
             except Exception:
                 continue
 
-        # ── Expected CTC ───────────────────────────────────────────────────────
+        # â”€â”€ Expected CTC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ectc_selectors = [
             "input[placeholder*='expected ctc' i]",
             "input[placeholder*='Expected CTC' i]",
@@ -1040,7 +1190,7 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
             except Exception:
                 continue
 
-        # ── Notice period dropdown ──────────────────────────────────────────────
+        # â”€â”€ Notice period dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         notice_selectors = [
             "select[id*='notice' i]",
             "select[name*='notice' i]",
@@ -1064,7 +1214,7 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
     return modal_found
 
 
-# ── Apply: NVites inbox flow (click card → Apply button in detail panel) ───────
+# â”€â”€ Apply: NVites inbox flow (click card â†’ Apply button in detail panel) â”€â”€â”€â”€â”€â”€â”€
 async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref,
                               current_loc: str = "Mumbai", ai_client=None,
                               current_ctc: float = 11.15, expected_ctc: float = 21.0,
@@ -1111,14 +1261,14 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
                 if apply_btn:
                     btn_text = (await apply_btn.inner_text()).strip().lower()
                     if "applied" in btn_text:
-                        log.info(f"Already applied (inbox) — {title} @ {company}")
+                        log.info(f"Already applied (inbox) â€” {title} @ {company}")
                         return False
                     break
             except Exception:
                 continue
 
         if not apply_btn:
-            log.warning(f"Apply button not found in inbox panel — {title} @ {company}")
+            log.warning(f"Apply button not found in inbox panel â€” {title} @ {company}")
             return False
 
         await apply_btn.click()
@@ -1141,10 +1291,10 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
                 pass
 
         if not submitted:
-            log.warning(f"NVite submit not confirmed — {title} @ {company}")
+            log.warning(f"NVite submit not confirmed â€” {title} @ {company}")
             return False
 
-        log.info(f"NVite applied (inbox flow) — {title} @ {company}")
+        log.info(f"NVite applied (inbox flow) â€” {title} @ {company}")
 
         if make_webhook:
             try:
@@ -1164,7 +1314,7 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
         return False
 
 
-# ── Apply ──────────────────────────────────────────────────────────────────────
+# â”€â”€ Apply â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_pref,
                      current_loc: str = "Mumbai", is_hr_invite: bool = False,
                      ai_client=None, current_ctc: float = 11.15,
@@ -1180,10 +1330,10 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
 
     try:
         if not url:
-            log.warning(f"No URL for {title} @ {company} — skipping apply")
+            log.warning(f"No URL for {title} @ {company} â€” skipping apply")
             return False
 
-        # ── Special flow: NVites inbox invites ────────────────────────────────
+        # â”€â”€ Special flow: NVites inbox invites â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         mail_id = job.get("mail_id", "")
         if is_hr_invite and mail_id and "mnjuser/inbox" in url:
             return await _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref,
@@ -1194,7 +1344,7 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         await page.goto(url, wait_until="domcontentloaded", timeout=25000)
         await page.wait_for_timeout(random.randint(2000, 3000))
 
-        # ── Step 1: Find and click the main Apply button ───────────────────────
+        # â”€â”€ Step 1: Find and click the main Apply button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         apply_selectors = [
             "button[class*='apply-button']",
             "a[class*='apply-button']",
@@ -1213,21 +1363,21 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
                     is_disabled = await apply_btn.get_attribute("disabled")
                     btn_text = (await apply_btn.inner_text()).strip().lower()
                     if is_disabled is not None or "applied" in btn_text:
-                        log.info(f"Already applied / disabled — {title} @ {company}")
+                        log.info(f"Already applied / disabled â€” {title} @ {company}")
                         return False
                     break
             except Exception:
                 continue
 
         if not apply_btn:
-            log.warning(f"Apply button not found — {title} @ {company}")
+            log.warning(f"Apply button not found â€” {title} @ {company}")
             return False
 
         log.info(f"Attempting apply: {title} @ {company}")
         await apply_btn.click()
         await page.wait_for_timeout(random.randint(3000, 4000))  # chatbot needs time to init
 
-        # ── Step 2: Handle chatbot apply panel (AI-powered) ────────────────────
+        # â”€â”€ Step 2: Handle chatbot apply panel (AI-powered) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if ai_client:
             submitted = await _handle_chatbot_apply(
                 page, ai_client, resume_data, job_title=f"{title} @ {company}",
@@ -1235,14 +1385,14 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
                 notice_days=notice_days, current_loc=current_loc,
             )
             if submitted:
-                log.info(f"Chatbot apply done — {title} @ {company}")
+                log.info(f"Chatbot apply done â€” {title} @ {company}")
             else:
-                # Chatbot didn't appear or didn't submit — check direct-apply or page confirmation
+                # Chatbot didn't appear or didn't submit â€” check direct-apply or page confirmation
                 try:
                     btn = await page.query_selector("button[class*='apply-button']")
                     if btn and "applied" in (await btn.inner_text()).lower():
                         submitted = True
-                        log.info(f"Direct apply confirmed — {title} @ {company}")
+                        log.info(f"Direct apply confirmed â€” {title} @ {company}")
                 except Exception:
                     pass
                 if not submitted:
@@ -1250,17 +1400,17 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
                         body = await page.evaluate("document.body.innerText")
                         if any(w in body.lower() for w in ["applied to", "application submitted", "you have applied"]):
                             submitted = True
-                            log.info(f"Direct apply confirmed via page text — {title} @ {company}")
+                            log.info(f"Direct apply confirmed via page text â€” {title} @ {company}")
                     except Exception:
                         pass
         else:
             submitted = False
 
         if not submitted:
-            log.warning(f"Apply not confirmed — {title} @ {company}")
+            log.warning(f"Apply not confirmed â€” {title} @ {company}")
             return False
 
-        # ── Step 3: Webhook notification ────────────────────────────────────────
+        # â”€â”€ Step 3: Webhook notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if make_webhook:
             try:
                 requests.post(make_webhook, json={
@@ -1282,7 +1432,7 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         return False
 
 
-# ── Utility ────────────────────────────────────────────────────────────────────
+# â”€â”€ Utility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _parse_years(period: str) -> int:
     import re
     years = re.findall(r"\b(20\d{2}|19\d{2})\b", period)

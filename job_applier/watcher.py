@@ -1,35 +1,37 @@
 """
 CareerOS Naukri Watcher
 ========================
-Background mein chalta rehta hai:
-  - 9:30 AM aur 2:00 PM pe automatically run karta hai
+Webhook/manual mode mein chalta hai:
+  - Schedule Windows Task Scheduler handle karta hai
   - Make.com WhatsApp trigger: POST http://localhost:8765/trigger
   - Manual: careeros/job_applier/trigger.txt file banao
 
 Setup:
-  1. python watcher.py         — start karo
-  2. ngrok http 8765           — public URL milega
+  1. python watcher.py         - start karo
+  2. ngrok http 8765           - public URL milega
   3. Make.com mein wo URL set karo
 """
 
-import time
-import subprocess
-import os
 import json
+import msvcrt
+import os
+import subprocess
 import threading
-from datetime import datetime, date
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import time
+from datetime import date, datetime
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-BASE_DIR     = Path(__file__).parent
-SCRIPT       = BASE_DIR / "run.py"
-LOG_FILE     = BASE_DIR / "logs" / "watcher.log"
+BASE_DIR = Path(__file__).parent
+SCRIPT = BASE_DIR / "run.py"
+LOG_FILE = BASE_DIR / "logs" / "watcher.log"
 TRIGGER_FILE = BASE_DIR / "trigger.txt"
-STATE_FILE   = BASE_DIR / "watcher_state.json"
+STATE_FILE = BASE_DIR / "watcher_state.json"
+LOCK_FILE = BASE_DIR / "watcher.lock"
 
-SCHEDULED_TIMES = ["09:30", "14:00"]
-WEBHOOK_PORT    = 8765
-CHECK_INTERVAL  = 60   # seconds
+SCHEDULED_TIMES = []  # Scheduling is handled by Windows Task Scheduler; watcher is manual/webhook-only
+WEBHOOK_PORT = 8765
+CHECK_INTERVAL = 60
 
 LOG_FILE.parent.mkdir(exist_ok=True)
 
@@ -42,7 +44,6 @@ def log(msg):
         f.write(line + "\n")
 
 
-# ── State ──────────────────────────────────────────────────────────────────────
 def load_state():
     try:
         if STATE_FILE.exists():
@@ -65,28 +66,37 @@ def mark_ran(state, key):
     save_state(state)
 
 
-# ── Run script ─────────────────────────────────────────────────────────────────
-def run_automation(reason: str):
-    log(f"{'='*50}")
-    log(f"TRIGGER: {reason}")
-    log(f"{'='*50}")
+def acquire_single_instance():
+    LOCK_FILE.parent.mkdir(exist_ok=True)
+    lock_handle = open(LOCK_FILE, "a+", encoding="utf-8")
     try:
-        result = subprocess.run(
-            ["python", "-u", str(SCRIPT)],
-            cwd=str(BASE_DIR),
-            timeout=7200
-        )
+        msvcrt.locking(lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+        lock_handle.seek(0)
+        lock_handle.truncate()
+        lock_handle.write(str(os.getpid()))
+        lock_handle.flush()
+        return lock_handle
+    except OSError:
+        lock_handle.close()
+        return None
+
+
+def run_automation(reason: str):
+    log(f"{'=' * 50}")
+    log(f"TRIGGER: {reason}")
+    log(f"{'=' * 50}")
+    try:
+        result = subprocess.run(["python", "-u", str(SCRIPT)], cwd=str(BASE_DIR), timeout=7200)
         log(f"Done. Exit code: {result.returncode}")
         return result.returncode == 0
     except subprocess.TimeoutExpired:
-        log("TIMEOUT — script ran too long")
+        log("TIMEOUT - script ran too long")
         return False
     except Exception as e:
         log(f"ERROR: {e}")
         return False
 
 
-# ── Webhook server (Make.com → WhatsApp trigger) ───────────────────────────────
 class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/trigger":
@@ -100,7 +110,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, *args):
-        pass   # suppress default HTTP logs
+        pass
 
 
 def start_webhook_server():
@@ -109,34 +119,39 @@ def start_webhook_server():
     server.serve_forever()
 
 
-# ── Main loop ──────────────────────────────────────────────────────────────────
 def main():
+    lock_handle = acquire_single_instance()
+    if not lock_handle:
+        log("Another watcher instance is already running. Exiting duplicate watcher.")
+        return
+
     log("=" * 55)
-    log("  CareerOS Naukri Watcher — Started")
-    log(f"  Scheduled: {', '.join(SCHEDULED_TIMES)}")
+    log("  CareerOS Naukri Watcher - Started")
+    schedule_display = ', '.join(SCHEDULED_TIMES) if SCHEDULED_TIMES else 'disabled (Task Scheduler owns schedule)'
+    log(f"  Scheduled: {schedule_display}")
     log(f"  Webhook:   http://localhost:{WEBHOOK_PORT}/trigger")
-    log(f"  Manual:    create trigger.txt in job_applier/")
+    log("  Manual:    create trigger.txt in job_applier/")
     log("=" * 55)
 
-    # Start webhook server in background thread
-    t = threading.Thread(target=start_webhook_server, daemon=True)
-    t.start()
+    thread = threading.Thread(target=start_webhook_server, daemon=True)
+    thread.start()
 
     state = load_state()
-
     while True:
         current_time = datetime.now().strftime("%H:%M")
 
-        # 1. Scheduled times
-        for t_sched in SCHEDULED_TIMES:
-            run_key = f"scheduled_{t_sched}"
-            if current_time >= t_sched and not already_ran_today(state, run_key):
-                run_automation(f"Scheduled {t_sched}")
-                mark_ran(state, run_key)
-                state = load_state()
-                break
+        if SCHEDULED_TIMES:
+            for scheduled_time in SCHEDULED_TIMES:
+                run_key = f"scheduled_{scheduled_time}"
+                if current_time >= scheduled_time and not already_ran_today(state, run_key):
+                    success = run_automation(f"Scheduled {scheduled_time}")
+                    if success:
+                        mark_ran(state, run_key)
+                    else:
+                        log(f"Scheduled run {scheduled_time} failed - slot will retry on next check.")
+                    state = load_state()
+                    break
 
-        # 2. Trigger file (Make.com webhook creates this)
         if TRIGGER_FILE.exists():
             reason = TRIGGER_FILE.read_text().strip() or "manual"
             TRIGGER_FILE.unlink()

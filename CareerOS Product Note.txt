@@ -1,0 +1,1010 @@
+================================================================================
+CAREEROS — COMPLETE PRODUCT CAPABILITY NOTE
+As-built documentation. Author: Product definition drafted by Claude Sonnet 4.6
+Date: March 2026
+================================================================================
+
+
+--------------------------------------------------------------------------------
+WHAT IS CAREEROS
+--------------------------------------------------------------------------------
+
+CareerOS is an AI-powered career coaching and job automation platform built
+exclusively for the Indian job market. It is a SaaS web application hosted on
+Streamlit Cloud, backed by a Python/Playwright automation engine that runs
+locally on the user's Windows PC.
+
+The product is opinionated: it understands how Naukri's ranking algorithm works,
+how RChilli (Naukri's ATS parser) reads resumes, how Indian recruiters evaluate
+profiles in the first 6 seconds, and how the gap between what candidates write
+and what gets them callbacks actually looks in practice.
+
+The target user is a mid-career Indian professional (5-12 years experience)
+who knows their work is good but doesn't know how to present it, which role
+to target, or how to make the system work in their favour.
+
+
+--------------------------------------------------------------------------------
+SECTION 1 — AUTHENTICATION & IDENTITY
+--------------------------------------------------------------------------------
+
+Method: Google OAuth 2.0 via Streamlit's native st.login() / st.user API.
+Requires Streamlit 1.41 or higher with [auth] section configured in
+Streamlit Cloud secrets.
+
+Flow:
+  1. User visits the app URL.
+  2. If not logged in: a centered landing page appears with a
+     "Sign in with Google" button.
+  3. User clicks → standard Google OAuth consent screen.
+  4. On approval: Streamlit receives the Google ID token.
+  5. User identity is extracted from st.user:
+        - st.user.email    (primary identity key — used throughout the app)
+        - st.user.name     (display name)
+        - st.user.picture  (avatar URL)
+  6. User is dropped directly into the CareerOS dashboard.
+
+User isolation:
+  Every user's data is stored in a directory keyed by MD5 hash of their
+  lowercase email. So user saikatpatra64@gmail.com → hash key → directory.
+  No two users' data can collide. No database login required.
+
+Sign out:
+  Available from the dashboard via a "Sign out" button that calls st.logout().
+
+
+--------------------------------------------------------------------------------
+SECTION 2 — USER ONBOARDING (SETUP PAGE)
+--------------------------------------------------------------------------------
+
+Page: 0_Setup.py
+URL slug: /Setup
+
+One-time setup page. Can be revisited to update preferences at any time.
+Collects three categories of data:
+
+2.1 NOTIFICATION SETUP (ntfy)
+
+  CareerOS auto-generates a unique, non-guessable notification topic for
+  each user derived from their email hash. Format: "careeros-{10char_hash}".
+
+  User is instructed to:
+    - Install the free ntfy app on their phone (iOS or Android)
+    - Subscribe to their unique topic code (shown on screen)
+    - Click "Test Notification" to verify the connection
+
+  A test push is fired from the web app to ntfy.sh to confirm it works.
+  No account required. No credit card. Completely free.
+
+2.2 NAUKRI CREDENTIALS
+
+  The user enters their Naukri registered email and password.
+
+  Security model:
+    - Password is encrypted using AES-256 Fernet symmetric encryption
+    - Encryption key (FERNET_KEY) is stored in Streamlit Cloud secrets
+      (never on the user's machine)
+    - The encrypted password (naukri_pass_enc) is stored in the user's
+      profile JSON file on the server
+    - The plaintext password is never written to disk at any point
+    - When the local automation runner needs to log in, it decrypts the
+      password at runtime using the same Fernet key read from config.json
+
+2.3 JOB PREFERENCES
+
+  - Preferred cities (multi-select): Bengaluru, Pune, Mumbai, Hyderabad,
+    Chennai, Noida, Gurgaon, Kolkata, Remote, Any
+  - Minimum salary in LPA (numeric input)
+  - Work mode preference: Any / Work from office / Hybrid / Remote
+
+2.4 CRM INTEGRATION (MAKE.COM)
+
+  On save, if MAKE_CRM_WEBHOOK is configured in Streamlit secrets, the
+  setup data (name, email, phone, notification pref, location, salary_min)
+  is posted to a Make.com webhook for CRM and marketing use.
+  This is non-blocking — if the webhook fails, setup still saves.
+
+All setup data is saved to profile.json in the user's data directory.
+
+
+--------------------------------------------------------------------------------
+SECTION 3 — RESUME BUILDER
+--------------------------------------------------------------------------------
+
+Page: 1_Resume_Builder.py
+URL slug: /Resume_Builder
+
+This is the core of the product. A multi-turn AI conversation that extracts
+the user's career story and generates a professional, ATS-ready resume.
+
+3.1 CONVERSATION ENGINE
+
+  Powered by: Claude Sonnet 4.6 (claude-sonnet-4-6) via Anthropic API
+  Model used in probing: max_tokens=1024
+  Model used in generation: max_tokens=8192
+
+  The session is managed by ResumeBuilderSession class in
+  modules/resume/session.py.
+
+  Flow:
+    - A system prompt primes Claude with deep knowledge of Indian job market,
+      Naukri algorithm, RChilli ATS parsing, salary benchmarks, and
+      experience repositioning
+    - Claude opens with a bilingual welcome and starts probing
+    - User responds in Hindi, English, or Hinglish — Claude matches the
+      user's language automatically (Unicode Devanagari detection)
+    - Minimum 6 exchanges before the "Generate Resume" button unlocks
+      (configurable via MIN_PROBE_ROUNDS in config.py)
+    - Claude signals readiness via a hidden [READY_TO_GENERATE] marker
+    - User can continue chatting beyond 6 rounds for more detail
+
+  Session persistence:
+    - Chat history is saved to resume_chat.json after each exchange
+    - If user returns later, they can "Continue from last session" or
+      "Start fresh"
+    - restore() classmethod reconstructs the session from saved history
+
+3.2 EXPERIENCE REPOSITIONING INTELLIGENCE (built into the AI prompt)
+
+  The system prompt trains Claude to never accept operational language.
+  It repositions every piece of experience:
+
+  Example transformations baked in:
+    - "Main call center mein tha" → managed 200+ daily customer interactions,
+      identified escalation patterns, reduced repeat complaints by 18%
+    - "Main Excel reports banata tha" → Designed MIS dashboards for senior
+      leadership, translated transactional data into business insights
+    - "Main teams ke beech coordinate karta tha" → Orchestrated cross-
+      functional dependencies across product, operations, and delivery teams
+    - "Main requirements gather karta tha" → Conducted JAD workshops and
+      stakeholder interviews, produced BRDs signed off by 3 teams
+    - "Main QA tester tha" → Designed acceptance criteria and traceability
+      matrices, reduced post-go-live defects by 35%
+
+  The AI helps users quantify where they have no numbers ("Roughly kitna
+  time save hua?").
+
+  Banned clichés the AI is trained to avoid:
+    - "Result-oriented professional"
+    - "Team player" / "go-getter"
+    - "Hard-working and dedicated"
+    - "Excellent communication skills" (without evidence)
+
+3.3 ROLE SUGGESTION (generated alongside the resume)
+
+  Claude analyses the user's signals and outputs a role recommendation:
+    - Primary recommended role (title)
+    - Confidence level: High or Medium
+    - Reasoning (2-3 sentences, specific to what the user said)
+    - Alternate roles (2-3 options)
+    - Domain mismatch warning (if what they want ≠ what they fit)
+    - Gap assessment (what's missing to reach their target role)
+    - Salary band in India at their experience level (2025-26 market rates)
+
+3.4 RESUME DATA STRUCTURE (JSON)
+
+  Generated resume is stored as structured JSON with these keys:
+    - name, target_title, domain_family (enterprise_IT / product / BFSI etc.)
+    - summary (professional summary paragraph)
+    - ats_keywords (list of 10-20 ATS keywords)
+    - skills (dict by category: Technical, Tools, Domain, Soft)
+    - experience (list of jobs, each with: company, title, period, bullets)
+    - education (list of degrees)
+    - certifications (list)
+    - role_suggestion (the role recommendation block)
+
+3.5 WORD RESUME EXPORT
+
+  Powered by: python-docx (modules/resume/word_export.py)
+
+  Output: ATS-friendly single-column Word (.docx) file.
+
+  Key design decisions:
+    - Single column layout (multi-column fails RChilli parsing on Naukri)
+    - Clean formatting with proper heading styles for ATS parsing
+    - Filename format: {Name}_{TargetRole}_Resume.docx
+
+  User clicks "Build Word Document" → downloads via browser.
+  Success message: "Upload directly to Naukri or attach to job applications."
+
+3.6 RESUME VERSIONING
+
+  Last 5 generated resume versions are stored in resume_history.json.
+  Current version is always available from generated_resume.json.
+
+
+--------------------------------------------------------------------------------
+SECTION 4 — PROFILE OPTIMIZER
+--------------------------------------------------------------------------------
+
+Page: 2_Profile_Optimizer.py
+URL slug: /Profile_Optimizer
+
+Requires: Resume must be built first (gated by checking generated_resume.json)
+AI Model: Claude Sonnet 4.6
+
+Generates copy-pasteable content for two platforms in separate tabs.
+
+4.1 NAUKRI PROFILE TAB (modules/profile/naukri_optimizer.py)
+
+  Outputs:
+    a. Profile Headline
+       - Max 250 characters
+       - Optimised for Naukri recruiter search ranking
+       - Keyword-dense, role-specific
+
+    b. Profile Summary
+       - Max 500 characters
+       - Structured for the 6-second recruiter scan
+       - Keyword density aligned with Naukri's internal scoring
+
+    c. Skills to ADD
+       - Full list of skills the user should add to their Naukri profile
+       - Sourced from their resume + standard market requirements for the role
+
+    d. Top 5 Skills (highest priority)
+       - The 5 skills to set as "Featured" in Naukri's skills section
+       - These carry extra ranking weight in Naukri's algorithm
+
+    e. Skills to REMOVE
+       - Outdated or irrelevant skills hurting the profile's relevance score
+
+    f. Employment Descriptions
+       - Per-job copy-pasteable descriptions for each role in history
+       - Formatted for Naukri's employment detail section
+
+    g. Profile Completeness Checklist
+       - Specific actions to reach 4-5 star Naukri profile rating
+       - Only 4-star and above profiles appear in default recruiter searches
+
+4.2 LINKEDIN PROFILE TAB (modules/profile/linkedin_optimizer.py)
+
+  Target: resumeworked.com score 75+
+
+  Outputs:
+    a. Estimated resumeworked.com Score
+       - Predicted score after implementing all recommendations
+
+    b. Implementation Checklist
+       - Line-by-line actions tied to resumeworked.com scoring criteria
+       - Format: [Item] — [Specific action]
+
+    c. Headline Options (3 variants)
+       - Multiple headline choices optimised for LinkedIn Recruiter search
+
+    d. About Section
+       - Full copy-pasteable LinkedIn About text
+       - First-person, achievement-led, 300-400 words
+
+    e. Top 5 Skills (pin these on LinkedIn)
+       - The 5 skills to pin at top for endorsement visibility
+
+    f. All 50 Skills to Add
+       - Complete skill list to max out LinkedIn's skill slots
+
+    g. Experience Bullets
+       - Per-role bullet points formatted for LinkedIn's experience section
+
+    h. Custom URL Suggestion
+       - Suggested vanity URL format: linkedin.com/in/{suggested}
+
+    i. Featured Section Idea
+       - What to pin in LinkedIn Featured section
+
+    j. Recommendation Request Template
+       - Ready-to-send message to request LinkedIn recommendations from
+         colleagues or managers
+
+
+--------------------------------------------------------------------------------
+SECTION 5 — ROLE CLARITY TOOL
+--------------------------------------------------------------------------------
+
+Page: 3_Role_Clarity.py
+URL slug: /Role_Clarity
+
+Standalone tool that doesn't require a built resume.
+Use case: User is confused about what role to target.
+
+5 quick questions (form-based, not chat):
+  1. Describe your day-to-day work (what you ACTUALLY do most)
+  2. What colleagues/manager come to YOU for help with
+  3. What part of your work makes time fly (the enjoyable part)
+  4. Total years of experience
+  5. What role are you targeting (optional)
+
+AI Analysis:
+  Claude processes the answers and returns:
+    - Primary recommended role
+    - Confidence level (High / Medium)
+    - Reasoning (specific to what they described)
+    - Alternate roles (2 options)
+    - Honest advice (if their target differs from recommendation — with
+      specific bridge steps, not generic encouragement)
+    - Salary band in India for the role at their experience level
+    - 3 Next Steps to move toward the recommended role
+
+The "honest advice" section is intentionally direct — if someone says they
+want to be a Product Manager but their answers indicate BA-level skills,
+CareerOS will say so and explain the specific gaps to bridge.
+
+
+--------------------------------------------------------------------------------
+SECTION 6 — ATS SCORE CHECKER
+--------------------------------------------------------------------------------
+
+Page: 4_ATS_Checker.py
+URL slug: /ATS_Checker
+
+Requires: Resume must be built first.
+AI Model: Claude Sonnet 4.6
+
+Use case: Before applying to any specific job, user pastes the JD to see
+how well their resume matches it and exactly what to fix.
+
+Input: Full job description (pasted as text)
+
+6.1 NAUKRI AI RELEVANCE SCORE SIMULATION
+
+  CareerOS simulates the exact 6-parameter scoring system Naukri shows
+  to recruiters (High / Medium / Low Match). Output for each:
+    - Skills match: candidate skills vs JD required skills (0-100 score)
+    - Designation match: title(s) vs job title (0-100)
+    - Experience match: years vs JD experience band (0-100)
+    - Salary match: expected CTC vs JD budget (0-100)
+    - Location match: candidate city vs job location (0-100)
+    - Education match: degree vs JD qualification (0-100)
+
+  Displayed as coloured progress bars (green/amber/red based on score).
+
+6.2 OVERALL SCORE AND VERDICT
+
+  Scoring bands:
+    - 80-100: Strong Apply
+    - 60-79: Apply with Tweaks
+    - 40-59: Weak Match — Tailor First
+    - 0-39: Skip This Job
+
+  Plus: One-liner biggest risk ("The single biggest reason this resume
+  might get rejected — max 15 words"). Brutally honest.
+
+6.3 KEYWORD ANALYSIS
+
+  Keywords Found: JD keywords present in the resume (shown as green pills)
+  Keywords Missing: JD keywords absent from resume (shown as red pills)
+  User should add missing keywords before applying.
+
+6.4 PRIORITISED RECOMMENDATIONS
+
+  3 specific, actionable recommendations (not generic advice):
+    - High Priority (Red): Must fix before applying
+    - Medium Priority (Amber): Significant improvement
+    - Low Priority (Green): Nice to have
+
+  Each recommendation specifies WHAT to change AND WHERE
+  (Resume headline / Skills section / Experience bullet / Profile summary).
+
+6.5 OPTIMISED HEADLINE SUGGESTION
+
+  A ready-to-use Naukri profile headline tailored specifically for this job.
+  User can copy directly into Naukri before applying.
+
+
+--------------------------------------------------------------------------------
+SECTION 7 — COVER LETTER GENERATOR
+--------------------------------------------------------------------------------
+
+Page: 6_Cover_Letter.py
+URL slug: /Cover_Letter
+
+Requires: Resume must be built first.
+AI Model: Claude Sonnet 4.6 (via modules/coverletter/generator.py)
+
+7.1 GENERATION
+
+  Inputs:
+    - Job description (optional but recommended for maximum tailoring)
+    - Tone selection: Professional / Confident / Concise
+
+  Outputs:
+    - Email Subject Line (ready to use)
+    - Full cover letter body (250-350 words)
+    - Word count indicator
+    - Opening hook (highlighted separately — the first-impression line)
+    - Tailoring notes (explains what the AI keyed on from the JD)
+
+  What CareerOS follows for Indian recruiter attention:
+    - Opens with an insight or hook, never "I am writing to..."
+    - 2-3 quantified achievements relevant to the JD
+    - Names the company specifically (shows it's not spray-and-pray)
+    - 250-350 words (short enough to be read, long enough to matter)
+    - Ends with a specific ask (not "hope to hear from you")
+
+  Pro tip displayed to user: "Paste this letter into the email body.
+  Don't attach it as a PDF — most Indian recruiters won't open attachments
+  from unknown candidates."
+
+7.2 DOWNLOAD
+
+  Downloaded as a .txt file: Subject: ... + body
+  File name: cover_letter.txt
+
+7.3 HISTORY
+
+  Last 10 generated cover letters are saved to cover_letters.json.
+  History tab shows date, subject line, tone, word count, JD snippet,
+  and full letter body. Each can be re-downloaded.
+
+
+--------------------------------------------------------------------------------
+SECTION 8 — SMART APPLY (JOB AUTOMATION ENGINE)
+--------------------------------------------------------------------------------
+
+Page: 5_Smart_Apply.py (configuration + results dashboard)
+Runner: job_applier/run.py (executes locally on user's Windows PC)
+Scheduler: job_applier/watcher.py (background process)
+
+This is the most complex module. The web app configures preferences and
+shows results. The actual browser automation runs on the user's local PC
+(required because Naukri blocks data centre IPs — residential IP is needed).
+
+8.1 WHAT THE WEB APP DOES (5_Smart_Apply.py)
+
+  Tab 1 — Configure & Download:
+    User sets:
+      - Job search keywords (auto-populated from resume target_title + alt_titles)
+      - Preferred locations (multi-select: Bengaluru, Pune, Mumbai, Hyderabad,
+        Chennai, Pune, Navi Mumbai, Remote, and 7 other Indian cities)
+      - Current location (used to fill Naukri's Easy Apply modal)
+      - Minimum salary in LPA
+      - Maximum jobs to apply per run (1-10 slider, default 5)
+      - Minimum years of experience filter
+      - Domains to avoid (multi-select: Capital Markets/Investment Banking,
+        Pharma/Clinical, K-12 Education, FMCG Brand Management, and others)
+      - Alternate job titles (other titles to search for besides target title)
+
+    Output: A config.zip downloaded to the user's PC containing:
+      - config.json with all preferences + encrypted Naukri password +
+        Fernet key + Anthropic API key + Supabase keys
+      - run.py (the automation script)
+      - requirements.txt
+      - install instructions
+
+  Tab 2 — Run History:
+    Shows last 30 automation runs fetched from Supabase (or local file fallback).
+    Each run shows: date, jobs found, jobs matched, jobs applied, jobs skipped,
+    applied list (title + company), skipped list (title + company + reason),
+    HR invites detected + whether applied.
+
+  Tab 3 — Recruiter Inbox:
+    Shows last 50 HR invites detected across all runs, fetched from Supabase.
+    Each invite shows: company, title, HR name, date detected, apply status.
+
+8.2 LOCAL RUNNER (run.py) — FULL AUTOMATION FLOW
+
+  Prerequisite: User has installed Python + Playwright on their Windows PC
+  and extracted the config.zip.
+
+  STEP 1 — Load Config
+    Reads config.json. Decrypts Naukri password using Fernet symmetric
+    decryption (key from config.json, encrypted password from config.json).
+
+  STEP 2 — Launch Browser
+    Uses Playwright async_playwright with Chromium.
+    In headless=True mode (scheduled/service runs): launches real Chrome
+    (channel="chrome") to bypass Naukri's bot detection. Falls back to
+    Playwright Chromium if real Chrome isn't installed.
+    Bot detection evasion:
+      - navigator.webdriver property set to undefined via init script
+      - --disable-blink-features=AutomationControlled launch arg
+      - Realistic user agent string (Chrome 133)
+      - Indian locale (en-IN)
+      - Standard 1366x768 viewport
+    In headless=False mode: visible browser for debugging.
+
+  STEP 3 — Naukri Login
+    Navigates to https://www.naukri.com/nlogin/login
+    Fills email + password fields
+    Clicks Login button
+    Waits for successful login (checks for profile menu or login page absence)
+    On failure: logs error, run aborts
+
+  STEP 4 — Recruiter Inbox / NVites Check (P1 — Highest Priority)
+    Navigates to https://www.naukri.com/mnjuser/inbox
+    Scrapes all NVite cards using selector: div.card.inbox-company-card
+    From each card extracts:
+      - data-mailid attribute (unique identifier)
+      - span.title or span.ellipsis.title (job title)
+      - span.comp-name (company name, strips "Hiring for " prefix)
+      - span.posted-by-txt (recruiter name, strips "Posted by " prefix)
+      - span.date-time-wrap (date posted)
+    Stores mail_id for later use in applying
+    Fallback: if inbox is empty, checks homepage for power-invite-card widgets
+      (selector: div.power-invite-card / div.rmj-card)
+    Sends instant ntfy push notification for each new HR invite detected
+    (title: "HR Invite — {company}", body: role + recruiter + status, priority: urgent)
+
+  STEP 5 — Regular Job Search (P2)
+    Constructs search URL from:
+      https://www.naukri.com/{keyword-slugified}-jobs?experience={exp_min}&location={locations}
+    Scrapes job listing cards from search results page
+    Extracts per job: title, company, location, experience, salary, URL,
+    whether Easy Apply is available
+    Collects up to configured maximum jobs
+
+  STEP 6 — AI Domain Matching (for each job and each invite)
+    Claude is called for each candidate job/invite with the question:
+    "Does this job match this candidate's domain and target role?"
+    Inputs: job title, company, job description snippet, candidate's
+    domain_family, target_title, avoid_domains list
+    Output: matched (True/False) + reason
+    If matched=False: job is added to skipped_list with reason
+    This prevents applying to irrelevant roles (e.g., a TPM getting matched
+    to a Capital Markets role)
+    Note: Claude API 529 overload errors are treated as SKIP (non-fatal)
+
+  STEP 7 — Resume Tailoring (for matched jobs)
+    Claude reads the job details and the user's resume data and produces:
+      - A tailored professional summary (3-4 sentences)
+      - Reordered and tweaked ATS keywords for this specific job
+    This tailored version is used if there's a form field for summary
+    during the apply flow
+
+  STEP 8 — Applying to Jobs
+
+    8A. NVite Inbox Apply Flow (for HR invites with mail_id):
+      - Navigates back to https://www.naukri.com/mnjuser/inbox
+      - Finds card by data-mailid attribute
+        (fallback: uses first card if exact match not found)
+      - Clicks card to open detail panel on right
+      - Finds Apply / Apply Now / Easy Apply button in the detail panel
+      - Checks for "Applied" text (skip if already applied)
+      - Clicks Apply button
+      - Calls Easy Apply Modal Handler (see 8C below)
+      - Clicks Submit Application / Submit if modal appears
+      - Fires Make.com webhook with type="hr_invite_apply" (if configured)
+
+    8B. Regular Job Easy Apply Flow (for jobs with direct URL):
+      - Navigates to job URL
+      - Scans for Apply button using multiple selectors:
+          button.styles_apply-button__N2-qy (Naukri 2024 class)
+          button[class*='apply-button']
+          a[class*='apply-button']
+          .applyButton
+          button.apply-button
+          button:has-text('Easy Apply')
+          button:has-text('Apply Now')
+          button:has-text('Apply')
+          #apply-button
+      - Checks if button shows "Applied" or is disabled (skip if so)
+      - Clicks Apply button
+      - Calls Easy Apply Modal Handler (see 8C below)
+      - Clicks Submit Application / Submit if a modal appeared
+      - Fires Make.com webhook with type="easy_apply" (if configured)
+
+    8C. Easy Apply Modal Handler (_handle_easy_apply_modal):
+      After clicking Apply, a modal may appear asking for profile details.
+      The handler tries to fill:
+
+      Current Location field:
+        Tries multiple selectors for the city typeahead input:
+          input[placeholder*='current city' i]
+          input[id*='currentCity' i]
+          input[id*='currentLocation' i]
+          [class*='currentCity'] input
+          [class*='location'] input[type='text']
+        If found: triple-clicks (selects all), types current_location from config
+        Waits for typeahead dropdown to appear
+        Tries to click first suggestion from the dropdown:
+          [class*='suggestItem'], [class*='suggestion-item'],
+          [class*='autocomplete'] li, [role='option'], etc.
+        If no dropdown: presses Enter to confirm
+
+      Notice Period field:
+        Tries selectors: select[id*='notice' i], [class*='noticePeriod'] select
+        If found: selects index=1 (typically "Immediate" or "0-15 days")
+
+      The handler is intentionally non-blocking — if any field is not found
+      or fails, it logs and continues. Does not abort the apply flow.
+
+  STEP 9 — Human-like Delays
+    Between each job: random.uniform(2, 4) second delay
+    After each click: random.randint(1500, 2500) ms wait
+    Page loads: random.randint(2000, 3000) ms wait
+    This prevents rate-limiting and looks human to Naukri's bot detection
+
+  STEP 10 — Results Sync to Supabase
+    After run completes, _sync_results() posts to Supabase:
+
+    run_history table row:
+      - user_email, run_date, jobs_found, jobs_applied, jobs_skipped
+      - applied_list (array of {title, company} objects)
+      - skipped_list (array of {title, company, reason} objects)
+      - hr_invites (array of invite objects)
+      - errors (array of error messages)
+
+    hr_invites table rows (one per invite):
+      - user_email, company, title, url, hr_name, applied (bool),
+        reason, detected_at
+
+    Fallback modes if Supabase not configured:
+      Mode 2: legacy api_ingest URL (blocked by Streamlit OAuth gate — not used)
+      Mode 3: direct file write to data/users/{user_id}/ on the same machine
+
+  STEP 11 — Run Complete Notification
+    Sends ntfy push: "CareerOS Run Complete"
+    Body: "HR invites processed: X | Jobs scanned: Y | Applied: Z"
+    Priority: low (doesn't buzz the phone, shows as silent notification)
+
+8.3 WATCHER / SCHEDULER (watcher.py)
+
+  A persistent background process (runs on user's PC, stays alive).
+
+  Three trigger mechanisms:
+
+    A. Scheduled Times (default: 9:30 AM and 2:00 PM daily)
+       Checks current time every 60 seconds.
+       Each scheduled slot runs once per day (tracked in watcher_state.json).
+       Prevents double-running if watcher is restarted mid-day.
+
+    B. Make.com Webhook Trigger
+       Runs a local HTTP server on port 8765.
+       Endpoint: POST /trigger
+       Creates a trigger.txt file that the main loop detects on next tick.
+       Use case: trigger a run from a WhatsApp message via Make.com + ngrok.
+       For external access: user runs ngrok to expose port 8765 publicly.
+
+    C. Manual Trigger File
+       Creating any file named trigger.txt in the job_applier directory
+       triggers an immediate run on the next 60-second check.
+
+  Run timeout: 7200 seconds (2 hours) — prevents hung runs.
+  All watcher events logged to job_applier/logs/watcher.log.
+
+  Windows service installation: install_service.ps1 PowerShell script
+  for setting up the watcher as a Windows startup service.
+
+
+--------------------------------------------------------------------------------
+SECTION 9 — NOTIFICATION ENGINE
+--------------------------------------------------------------------------------
+
+Service used: ntfy.sh (free, open source, no account required)
+Module: modules/notifications/ntfy.py
+
+9.1 TOPIC DERIVATION
+  Each user gets a unique, non-guessable topic: "careeros-{md5_hash[:10]}"
+  Derived from their email. Deterministic — same email always gets same topic.
+  Users subscribe in the ntfy mobile app using this topic code.
+
+9.2 NOTIFICATION TYPES
+
+  HR Invite Detected:
+    Priority: URGENT (full screen takeover on phone)
+    Tags: fire, briefcase
+    Title: "HR Invite — {Company Name}"
+    Body: Role + HR Name + Status (Auto-applied / Needs your attention)
+    Click action: Link to the job/invite URL
+
+  Profile Viewed (designed, not yet wired to Naukri profile view events):
+    Priority: HIGH
+    Tags: eyes
+    Title: "Profile Viewed — {Company Name}"
+    Body: "An HR from this company viewed your Naukri profile. Invite may follow."
+
+  Run Complete:
+    Priority: LOW (silent notification)
+    Tags: white_check_mark
+    Title: "CareerOS Run Complete"
+    Body: HR invites processed + Jobs scanned + Applied counts
+
+  Test Notification (from Setup page):
+    Priority: DEFAULT
+    Tags: tada
+    Title: "CareerOS is connected!"
+    Body: Confirmation message
+
+9.3 HOW NTFY WORKS
+  All notifications POST to https://ntfy.sh/{topic} with HTTP headers.
+  No API key needed for the default tier. Free up to reasonable limits.
+  Works on Android, iOS, Web, and desktop.
+  Open source — can be self-hosted if needed in future.
+
+
+--------------------------------------------------------------------------------
+SECTION 10 — DATA PERSISTENCE LAYER
+--------------------------------------------------------------------------------
+
+10.1 LOCAL JSON STORE (primary for web app user data)
+
+  Class: UserStore (persistence/store.py)
+  Location: {project_root}/data/users/{md5_email_hash_12char}/
+  Format: JSON files, UTF-8 encoded, pretty-printed
+
+  Files per user:
+    profile.json          — setup data, Naukri credentials (encrypted), preferences
+    generated_resume.json — current resume (structured JSON)
+    resume_history.json   — last 5 resume versions
+    resume_chat.json      — full conversation history for resume builder session
+    profile_optimizer.json— Naukri + LinkedIn generated content
+    apply_prefs.json      — Smart Apply preferences (locations, salary, etc.)
+    apply_history.json    — last 30 automation run results (local fallback)
+    hr_invites.json       — last 50 HR invites detected (local fallback)
+    cover_letters.json    — last 10 generated cover letters
+
+10.2 SUPABASE (primary for automation sync)
+
+  Supabase project: jberxpkuyezqbveztnep.supabase.co
+  Authentication: publishable API key (row-level access, no admin)
+
+  Tables:
+    run_history:
+      id, created_at, user_email, run_date, jobs_found, jobs_applied,
+      jobs_skipped, applied_list (jsonb), skipped_list (jsonb),
+      hr_invites (jsonb), errors (jsonb)
+
+    hr_invites:
+      id, created_at, user_email, company, title, url, hr_name,
+      applied (boolean), reason, detected_at
+
+  Write path: local run.py → Supabase REST API (POST /rest/v1/{table})
+  Read path: web app 5_Smart_Apply.py → Supabase REST API (GET /rest/v1/{table})
+
+  Fallback: if Supabase is unreachable or unconfigured, reads fall back to
+  local JSON files (apply_history.json and hr_invites.json).
+
+  Why Supabase instead of direct API call to Streamlit web app:
+    Streamlit Cloud's server-side rendering puts Google OAuth in front of
+    every route including API endpoints. The local runner cannot pass Google
+    OAuth tokens. Supabase bypasses this entirely with a direct REST call
+    using the publishable key.
+
+10.3 STREAMLIT SESSION STATE
+
+  In-session (not persisted to disk):
+    - rb_step, rb_session, rb_chat, rb_resume, rb_doc_bytes, rb_exchange
+      (Resume Builder conversation state for the current browser session)
+    - last_cover_letter (most recently generated cover letter)
+
+  Session state is reset on browser refresh. Long-running resume builder
+  sessions are persisted to resume_chat.json via store.save_chat_history()
+  after each exchange so they can be restored on next visit.
+
+
+--------------------------------------------------------------------------------
+SECTION 11 — AI USAGE SUMMARY
+--------------------------------------------------------------------------------
+
+All AI calls use Claude Sonnet 4.6 (model ID: claude-sonnet-4-6)
+via the Anthropic API (key stored in Streamlit secrets and config.json).
+
+Where Claude is called:
+
+  1. Resume Builder probing: each chat exchange (max_tokens=1024)
+  2. Resume generation: final generation call (max_tokens=8192)
+  3. Profile Optimizer — Naukri: generate_naukri_profile() (estimated 2000+ tokens)
+  4. Profile Optimizer — LinkedIn: generate_linkedin_profile() (estimated 2000+ tokens)
+  5. Role Clarity: single call with 5 questions (max_tokens=1500)
+  6. ATS Checker: single call per JD analysis (max_tokens=2000)
+  7. Cover Letter: single call per generation (estimated 1500 tokens)
+  8. Smart Apply — Domain Match: one call per job candidate (max_tokens ~500)
+  9. Smart Apply — Resume Tailoring: one call per matched job (max_tokens ~1000)
+
+Claude costs are shared-tenant (Anthropic API key belongs to CareerOS).
+The user does not need their own Anthropic account.
+The local run.py uses the Anthropic key embedded in config.json
+(downloaded as part of config.zip from the web app).
+
+
+--------------------------------------------------------------------------------
+SECTION 12 — TECH STACK
+--------------------------------------------------------------------------------
+
+Web Application:
+  - Python 3.11+
+  - Streamlit (1.41+ with native OAuth support)
+  - Hosted on Streamlit Community Cloud
+  - URL: careeros-xup3ndjmbzrzygjqnenrct.streamlit.app
+
+AI:
+  - Anthropic Claude Sonnet 4.6 (claude-sonnet-4-6)
+  - Anthropic Python SDK
+
+Browser Automation:
+  - Playwright (Python async API)
+  - Chromium / real Chrome (channel="chrome" for headless mode)
+
+Database / Storage:
+  - Supabase (PostgreSQL-backed REST API)
+  - JSON files (local per-user storage on Streamlit Cloud server)
+
+Encryption:
+  - cryptography.fernet (AES-256 for Naukri password)
+  - Key stored in Streamlit Cloud secrets (FERNET_KEY)
+
+Notifications:
+  - ntfy.sh (free push notification service)
+  - HTTP POST to ntfy.sh API
+
+Scheduling / Automation:
+  - Python subprocess (watcher.py spawns run.py)
+  - Standard library http.server (Make.com webhook receiver)
+  - Windows Task Scheduler (optional, via install_service.ps1)
+
+Resume Export:
+  - python-docx (Word .docx generation)
+
+Third-party Integrations (optional/configured):
+  - Make.com (CRM webhook on setup, apply event webhook)
+  - ngrok (expose local webhook port to internet for Make.com trigger)
+
+
+--------------------------------------------------------------------------------
+SECTION 13 — WHAT IS NOT YET BUILT (HONEST GAPS)
+--------------------------------------------------------------------------------
+
+These are capabilities referenced in the UI as "Coming Soon" or identified
+as significant missing pieces for the automation engine:
+
+  1. COMPANY PORTAL APPLY (BIGGEST GAP)
+     When a Naukri job shows "Apply on Company Site" instead of Easy Apply,
+     the bot follows the redirect to the company's own ATS portal and does
+     nothing. It returns False and skips the job.
+
+     This affects approximately 40-60% of mid-to-senior PM/TPM roles on
+     Naukri, since most large companies use their own portals:
+       - Workday (most common for large Indian enterprises — Tata, Infosys, etc.)
+       - Greenhouse (startups and product companies)
+       - Lever (mid-size tech companies)
+       - iCIMS (some large MNCs)
+       - SAP SuccessFactors (manufacturing, BFSI)
+
+     Each ATS has a completely different form structure. Not yet built.
+
+  2. APPLICATION TRACKER
+     Shown on dashboard as "Coming Soon".
+     No tracking of: applied-to job status, interview scheduling,
+     follow-up reminders, response rate analytics.
+
+  3. INTERVIEW PREP MODULE
+     Shown on dashboard as "Coming Soon".
+     No interview Q&A generation, HR round prep, STAR-format answers,
+     company-specific question banks.
+
+  4. PROFILE VIEW MONITORING
+     notify_profile_view() function exists in ntfy.py but is not wired
+     to any Naukri scraping. Naukri shows profile views in
+     "Who viewed my profile" section. Not yet automated.
+
+  5. LINKEDIN JOB APPLICATIONS
+     The automation engine only targets Naukri. LinkedIn Easy Apply
+     is not built. LinkedIn jobs are a major parallel channel.
+
+  6. RESUME AUTO-UPDATE ON NAUKRI
+     CareerOS generates a Word resume and profile optimizer content but
+     does not automatically update the Naukri profile (headline, summary,
+     skills, employment descriptions). User must copy-paste manually.
+
+  7. MULTI-USER / TEAMS
+     Designed as a single-tenant SaaS. No admin dashboard, no user
+     management, no billing/subscription engine.
+
+  8. INTERVIEW SCHEDULING INTEGRATION
+     No calendar integration (Google Calendar, Outlook) for interview
+     slot management or automatic scheduling.
+
+  9. WHATSAPP TRIGGER (PARTIAL)
+     The watcher.py webhook exists and can receive Make.com POST requests.
+     The Make.com scenario to trigger a run from a WhatsApp message is
+     designed but depends on external Make.com configuration. Not
+     bundled or automated end-to-end.
+
+  10. NAUKRI RESUME UPDATE AUTOMATION
+      After applying, CareerOS does not refresh the "resume freshness"
+      signal on Naukri (which affects search ranking). Old resumes rank
+      lower — manual refresh or automation needed.
+
+
+--------------------------------------------------------------------------------
+SECTION 14 — USER JOURNEY END TO END
+--------------------------------------------------------------------------------
+
+Day 1 — First time user:
+  1. Visits app URL → Google sign-in
+  2. Setup page: enters Naukri credentials, chooses preferred locations,
+     sets up ntfy on phone, clicks "Test Notification", saves.
+  3. Role Clarity page (optional): answers 5 questions,
+     gets role recommendation + salary band.
+  4. Resume Builder: 10-15 minute chat in Hindi or English,
+     downloads Word resume.
+  5. Profile Optimizer: generates Naukri headline/summary/skills,
+     copy-pastes into Naukri profile manually.
+  6. ATS Checker: pastes a target job description, sees keyword gaps,
+     updates resume if needed.
+  7. Cover Letter: generates a tailored letter for their top application.
+
+Day 2+ — Automation running:
+  1. User downloads config.zip from Smart Apply page.
+  2. Extracts on Windows PC, runs: python watcher.py
+  3. At 9:30 AM and 2:00 PM every day:
+     - Bot logs into Naukri automatically
+     - Checks NVites inbox for fresh HR invites
+     - Searches for matching jobs
+     - Claude scores each job against the profile
+     - Applies to matching jobs (Easy Apply only)
+     - Syncs results to Supabase
+     - Sends ntfy push notification summary
+  4. On phone: instant alert if an HR invite arrives (urgent priority push).
+  5. On web app: Run History tab shows all applications.
+  6. User can check Smart Apply → Recruiter Inbox for all HR invite history.
+
+
+================================================================================
+END OF PRODUCT NOTE
+================================================================================
+
+--------------------------------------------------------------------------------
+UPDATE LOG — MARCH 7, 2026
+--------------------------------------------------------------------------------
+
+CareerOS local automation improvements applied:
+- watcher.py now prevents duplicate concurrent watcher instances via a lock file
+- scheduled runs are marked complete only after success (failed slots can retry)
+- run.py no longer depends on one narrow exact-title + one-location query only
+- new search breadth model uses multiple titles + multiple locations per run
+- new config knobs:
+  max_jobs_to_scan, search_titles_per_run, search_locations_per_run
+- Smart Apply UI now exposes Make.com webhook URL and Mailbolt webhook URL fields
+- local config updated to headless service mode defaults for unattended execution
+
+Operational truth:
+- Works when the user laptop is ON and awake (locked/logged off is OK)
+- Does NOT work when the laptop is powered off, sleeping, or hibernating
+- Therefore Make.com can trigger and orchestrate, but cannot replace the need for
+  an actually running machine on a residential IP
+
+Root cause of the “13 jobs only” issue:
+- Runner was searching a single URL only:
+  Technical Program Manager + Thane + one exact search page
+- Result breadth was artificially narrow before AI filtering even started
+- Current live config now expands to 12 search combinations across:
+  Technical Program Manager / Program Manager / Delivery Manager / IT Project Manager
+  and Thane / Navi Mumbai / Mumbai
+
+[2026-03-07 16:37 IST] Smart Apply live verification
+- Patched the local runner to read config.json with utf-8-sig so installer/exported configs with BOM do not break execution.
+- Live runner confirmed widened search breadth: 12 search combinations are now generated from current settings.
+- The run still produced 0 jobs because login did not complete; failure occurs after Login click with timeout 20000ms exceeded.
+- This confirms the earlier 13-job issue was breadth-related, while the current production blocker is Naukri login/session handling.
+
+[2026-03-07 17:05 IST] Smart Apply login verification
+- Root cause of the apparent login failure was Playwright waiting on 
+etworkidle after Login click.
+- Naukri remained active with background requests even after successful authentication, so the runner logged a false timeout.
+- Smart Apply login flow now validates success through URL/selector checks and writes screenshot + HTML evidence on true failures.
+- Verified live run after patch: login succeeded, recruiter inbox loaded, 60 unique jobs were collected, 16 matched, and 5 were applied.
+
+[2026-03-07 17:14 IST] Scheduler verification
+- CareerOS local automation is operational.
+- Windows Task Scheduler already contains direct un.py jobs for morning/afternoon, and a duplicate second pair with similar names.
+- watcher.py was also started successfully and created watcher.lock plus watcher.log.
+- This confirms automation works, but there are currently two scheduler layers in play (Task Scheduler direct runs + watcher), which should be consolidated to avoid duplicate executions.
+
+[2026-03-07 17:18 IST] Scheduler cleanup status
+- watcher.py is now manual/webhook-only; scheduling responsibility is intentionally moved to Windows Task Scheduler.
+- Verification watcher and its child run were stopped after confirmation to avoid duplicate applications.
+- One-off test tasks were disabled, but duplicate recurring tasks (CareerOS-Morning, CareerOS-Afternoon) could not be disabled without higher Windows privileges.
+- Temporary operational recommendation: treat CareerOS Morning Run and CareerOS Afternoon Run as canonical tasks; remove/disable duplicate recurring tasks from an elevated admin session.
+
+[2026-03-07 18:05 IST] Naukri profile updater implemented
+- CareerOS now includes a dedicated local update_profile.py runner for Naukri profile refresh.
+- The Profile Optimizer page can package a standalone updater ZIP with encrypted credentials + generated Naukri profile content.
+- Smart Apply installer ZIP also now embeds 
+aukri_profile_data and ships update_profile.py.
+- Implemented auto-update sections: headline, profile summary, key skills, preferred locations, and employment descriptions (best-effort DOM match).
+- This closes the earlier gap where Profile Optimizer only generated copy-paste text and had no execution path.
+
+[2026-03-07 18:10 IST] Live Naukri profile updater verification
+- Real account run completed successfully for login, headline update, and key skills save.
+- Remaining failing sections on current Naukri DOM: profile summary, preferred locations, employment descriptions.
+- This confirms the updater architecture is valid; remaining work is selector hardening, not feature design.

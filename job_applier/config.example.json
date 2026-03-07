@@ -1,5 +1,5 @@
 {
-  "_comment": "This is a template. Get your actual config by downloading the Installer ZIP from CareerOS Smart Apply page.",
+  "_comment": "This is a template. Get your actual config by downloading the Installer ZIP from CareerOS Smart Apply or Profile Optimizer page.",
   "user_email": "your@gmail.com",
   "naukri_email": "your.naukri@email.com",
   "naukri_pass_enc": "generated-by-web-app",
@@ -8,11 +8,16 @@
   "careeros_sync_url": "provided-by-careeros",
   "headless": true,
   "make_webhook_url": "",
+  "mailbolt_webhook_url": "",
   "notif_pref": "ntfy",
   "notification_contact": "",
+  "current_location": "Mumbai",
   "preferred_locations": ["Mumbai", "Pune", "Bengaluru"],
   "salary_min": 10,
   "max_jobs_per_run": 5,
+  "max_jobs_to_scan": 60,
+  "search_titles_per_run": 4,
+  "search_locations_per_run": 3,
   "exp_min": 3,
   "avoid_domains": [],
   "alt_titles": [],
@@ -23,5 +28,15 @@
     "ats_keywords": [],
     "experience": [],
     "skills": {}
+  },
+  "naukri_profile_data": {
+    "headline": "Generated on Profile Optimizer page",
+    "profile_summary": "Generated on Profile Optimizer page",
+    "skills_add": [],
+    "skills_remove": [],
+    "top_5_skills": [],
+    "preferred_locations": [],
+    "employment_descriptions": [],
+    "profile_completeness_tips": []
   }
 }

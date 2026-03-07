@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Page 5 — Smart Job Apply
+Page 5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Smart Job Apply
 Configure preferences, download local runner config, view run history.
 """
 import io
@@ -63,14 +63,15 @@ def _load_hr_invites(email: str, store: UserStore) -> list:
     )
     return rows if rows else store.load_hr_invites()
 
-st.set_page_config(page_title="Smart Apply – CareerOS", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Smart Apply ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ CareerOS", page_icon="ÃƒÂ°Ã…Â¸Ã‚Â¤Ã¢â‚¬â€œ", layout="wide")
 require_login()
 inject_global_css()
 
 email = get_user_email()
 store = UserStore(email)
+saved_opt = store.load_profile_optimizer()
 
-# ── Styles ────────────────────────────────────────────────────────────────────
+# ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Styles ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 st.markdown("""
 <style>
 .how-step {
@@ -112,25 +113,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="pg-title"><span class="pg-icon">🤖</span><span class="pg-name">Smart Auto-Apply</span><span class="pg-sub">AI scoring + auto-apply at 9:30 AM &amp; 2 PM</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">ÃƒÂ°Ã…Â¸Ã‚Â¤Ã¢â‚¬â€œ</span><span class="pg-name">Smart Auto-Apply</span><span class="pg-sub">AI scoring + auto-apply at 9:30 AM &amp; 2 PM</span></div>', unsafe_allow_html=True)
 
-# ── Resume check ──────────────────────────────────────────────────────────────
+# ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Resume check ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 resume_saved = store.load_resume()
 resume_data  = resume_saved.get("structured_data", {})
 profile      = store.load_profile()
 
 if not resume_data:
-    st.warning("Build your resume first — Smart Apply needs it to match jobs intelligently.")
-    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder →", icon="📄")
+    st.warning("Build your resume first ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Smart Apply needs it to match jobs intelligently.")
+    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢", icon="ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾")
     st.stop()
 
-# ── Tabs ─────────────────────────────────────────────────────────────────────
+# ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tabs ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 tab_prefs, tab_setup, tab_history, tab_inbox = st.tabs([
-    "⚙️ Job Preferences", "🚀 Setup & Run", "📊 Run History", "📬 Recruiter Inbox"
+    "ÃƒÂ¢Ã…Â¡Ã¢â€žÂ¢ÃƒÂ¯Ã‚Â¸Ã‚Â Job Preferences", "ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Setup & Run", "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  Run History", "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¬ Recruiter Inbox"
 ])
 
 # =============================================================================
-# TAB 1 — JOB PREFERENCES
+# TAB 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â JOB PREFERENCES
 # =============================================================================
 with tab_prefs:
     st.markdown("### Configure What Jobs to Apply To")
@@ -196,6 +197,43 @@ with tab_prefs:
             label_visibility="collapsed",
         )
 
+        st.markdown("#### Search Breadth")
+        c3, c4 = st.columns(2)
+        with c3:
+            search_titles_per_run = st.slider(
+                "Titles per run",
+                min_value=1, max_value=8,
+                value=int(saved_prefs.get("search_titles_per_run", 4)),
+                help="How many target or alternate titles to search each run."
+            )
+        with c4:
+            search_locations_per_run = st.slider(
+                "Locations per run",
+                min_value=1, max_value=8,
+                value=int(saved_prefs.get("search_locations_per_run", 3)),
+                help="How many preferred locations to include each run."
+            )
+
+        max_jobs_to_scan = st.slider(
+            "Max Jobs to Scan Per Run",
+            min_value=20, max_value=150,
+            value=int(saved_prefs.get("max_jobs_to_scan", 60)),
+            step=5,
+            help="How many unique jobs CareerOS should evaluate before it stops searching."
+        )
+
+        st.markdown("#### Workflow Webhooks")
+        make_webhook_url = st.text_input(
+            "Make.com Webhook URL (optional)",
+            value=saved_prefs.get("make_webhook_url", ""),
+            help="CareerOS will POST run and apply events here if configured."
+        )
+        mailbolt_webhook_url = st.text_input(
+            "Mailbolt Webhook URL (optional)",
+            value=saved_prefs.get("mailbolt_webhook_url", ""),
+            help="Optional Mailbolt or email automation webhook for summaries and digests."
+        )
+
         st.markdown("#### Domains to AVOID")
         st.caption("Jobs in these domains will be hard-rejected regardless of title match.")
         avoid_domains = st.multiselect(
@@ -216,7 +254,12 @@ with tab_prefs:
             "work_mode":     work_mode,
             "salary_min":    salary_min,
             "max_jobs":      max_jobs,
+            "max_jobs_to_scan": max_jobs_to_scan,
             "exp_min":       exp_min,
+            "search_titles_per_run": search_titles_per_run,
+            "search_locations_per_run": search_locations_per_run,
+            "make_webhook_url": make_webhook_url.strip(),
+            "mailbolt_webhook_url": mailbolt_webhook_url.strip(),
             "alt_titles":    [t.strip() for t in alt_titles.split(",") if t.strip()],
             "avoid_domains": avoid_domains,
         }
@@ -225,27 +268,27 @@ with tab_prefs:
 
 
 # =============================================================================
-# TAB 2 — SETUP & RUN
+# TAB 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SETUP & RUN
 # =============================================================================
 with tab_setup:
     st.markdown("### How Smart Apply Works")
 
     st.markdown("""
     <div class="warning-box">
-        ⚠️ <strong>Why does it run on your PC, not in the cloud?</strong><br>
+        ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â <strong>Why does it run on your PC, not in the cloud?</strong><br>
         Naukri actively blocks cloud server IPs (AWS, GCP, Azure) as bots.
         Your home/office IP is trusted. The local runner uses your residential IP to browse
-        Naukri exactly like you would — with a real browser.
+        Naukri exactly like you would ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â with a real browser.
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     steps = [
-        ("Download the installer package", "One ZIP — everything inside. Click the button below."),
+        ("Download the installer package", "One ZIP ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â everything inside. Click the button below."),
         ("Unzip to any folder", "e.g. <code>C:\\CareerOS\\</code>. Keep the folder intact."),
-        ("Run the installer once", "Right-click PowerShell → <strong>Run as Administrator</strong> → navigate to the folder → run <code>.\\install_service.ps1</code>"),
-        ("Done — it runs forever", "CareerOS Watcher starts on every boot, runs at <strong>9:30 AM</strong> and <strong>2 PM</strong> daily. Results appear in Run History automatically."),
+        ("Run the installer once", "Right-click PowerShell ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ <strong>Run as Administrator</strong> ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ navigate to the folder ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ run <code>.\\install_service.ps1</code>"),
+        ("Done ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â it runs forever", "CareerOS Watcher starts on every boot, runs at <strong>9:30 AM</strong> and <strong>2 PM</strong> daily. Results appear in Run History automatically."),
     ]
 
     for i, (title, body) in enumerate(steps, 1):
@@ -272,16 +315,20 @@ with tab_setup:
         "supabase_url":         _get_secret("SUPABASE_URL", ""),
         "supabase_key":         _get_secret("SUPABASE_KEY", ""),
         "careeros_sync_url":    _get_sync_url(),
-        "make_webhook_url":     "",
+        "make_webhook_url":     prefs.get("make_webhook_url", ""),
+        "mailbolt_webhook_url": prefs.get("mailbolt_webhook_url", ""),
         "notif_pref":           profile.get("notif_pref", "ntfy"),
         "notification_contact": profile.get("ntfy_topic", ""),
         "current_location":     prefs.get("current_location", prefs.get("locations", ["Mumbai"])[0] if prefs.get("locations") else "Mumbai"),
         "preferred_locations":  prefs.get("locations", ["Pune"]),
         "salary_min":           prefs.get("salary_min", 0),
         "max_jobs_per_run":     prefs.get("max_jobs", 5),
+        "max_jobs_to_scan":     prefs.get("max_jobs_to_scan", 60),
+        "search_titles_per_run": prefs.get("search_titles_per_run", 4),
+        "search_locations_per_run": prefs.get("search_locations_per_run", 3),
         "exp_min":              prefs.get("exp_min", 3),
-        "avoid_domains":        prefs.get("avoid_domains", []),
         "alt_titles":           prefs.get("alt_titles", []),
+        "naukri_profile_data":   saved_opt.get("naukri", {}),
         "resume_data": {
             "target_title":  resume_data.get("target_title", ""),
             "domain_family": resume_saved.get("domain_family", "enterprise_IT"),
@@ -292,19 +339,19 @@ with tab_setup:
         },
     }
 
-    # ── Build ZIP in memory ───────────────────────────────────────────────────
+    # ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Build ZIP in memory ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
     job_applier_dir = Path(__file__).parent.parent / "job_applier"
 
-    install_readme = """CareerOS Local Runner — Quick Install
+    install_readme = """CareerOS Local Runner ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Quick Install
 =======================================
 
 REQUIREMENT: Google Chrome must be installed on this PC.
   Download from: https://www.google.com/chrome/
-  (Chrome runs hidden in the background — no window will open)
+  (Chrome runs hidden in the background ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no window will open)
 
 INSTALL AS WINDOWS SERVICE (runs on boot, no login needed):
   1. Open PowerShell as Administrator
-     (Right-click the Start menu → Windows PowerShell (Admin))
+     (Right-click the Start menu ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Windows PowerShell (Admin))
   2. Navigate to this folder:
      cd "C:\\CareerOS"   (or wherever you unzipped)
   3. Run the installer:
@@ -325,7 +372,7 @@ MANUAL TRIGGER (runs immediately):
 SCHEDULED TIMES: 9:30 AM and 2:00 PM daily.
 
 LOGS: logs\\service.log
-RESULTS: Appear in CareerOS web app → Smart Apply → Run History
+RESULTS: Appear in CareerOS web app ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Smart Apply ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Run History
 """
 
     zip_buffer = io.BytesIO()
@@ -334,7 +381,7 @@ RESULTS: Appear in CareerOS web app → Smart Apply → Run History
                     json.dumps(config_data, indent=2, ensure_ascii=False))
         zf.writestr("INSTALL.txt", install_readme)
 
-        for fname in ["watcher.py", "run.py", "install_service.ps1",
+        for fname in ["watcher.py", "run.py", "update_profile.py", "install_service.ps1",
                       "start_watcher.bat", "requirements.txt"]:
             fpath = job_applier_dir / fname
             if fpath.exists():
@@ -348,7 +395,7 @@ RESULTS: Appear in CareerOS web app → Smart Apply → Run History
     st.info("Everything is pre-configured. Just unzip, run `install_service.ps1` as Admin, and CareerOS starts working automatically.")
 
     st.download_button(
-        label="⬇️ Download CareerOS Installer (ZIP)",
+        label="ÃƒÂ¢Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Download CareerOS Installer (ZIP)",
         data=zip_buffer.getvalue(),
         file_name="careeros_installer.zip",
         mime="application/zip",
@@ -379,7 +426,7 @@ notepad logs\\service.log
 
 
 # =============================================================================
-# TAB 3 — RUN HISTORY
+# TAB 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â RUN HISTORY
 # =============================================================================
 with tab_history:
     st.markdown("### Application Run History")
@@ -388,10 +435,10 @@ with tab_history:
     history = _load_run_history(email, store)
 
     if not history:
-        st.info("No runs yet. Set up the local runner and complete your first run — results will appear here automatically.")
+        st.info("No runs yet. Set up the local runner and complete your first run ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â results will appear here automatically.")
         st.markdown("""
         <div style="background:#F8FAFC;border-radius:12px;padding:20px;text-align:center;color:#6B7280;margin-top:16px;">
-            <div style="font-size:2rem;">🤖</div>
+            <div style="font-size:2rem;">ÃƒÂ°Ã…Â¸Ã‚Â¤Ã¢â‚¬â€œ</div>
             <div style="font-size:0.9rem;margin-top:8px;">Waiting for first run...</div>
             <div style="font-size:0.8rem;margin-top:4px;">Go to Setup tab to get started.</div>
         </div>
@@ -426,69 +473,69 @@ with tab_history:
             applied_list  = run.get("applied_list", [])
             skipped_list  = run.get("skipped_list", [])
 
-            with st.expander(f"**{run_date}** — Applied: {applied_count} | Skipped: {skipped_count}"):
+            with st.expander(f"**{run_date}** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Applied: {applied_count} | Skipped: {skipped_count}"):
                 if applied_list:
-                    st.markdown("**✅ Applied To:**")
+                    st.markdown("**ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Applied To:**")
                     for job in applied_list:
                         url = job.get("url", "")
                         link = f"[{job.get('title')} @ {job.get('company')}]({url})" if url else f"{job.get('title')} @ {job.get('company')}"
                         st.markdown(f"- {link}")
 
                 if skipped_list:
-                    st.markdown("**❌ Skipped:**")
+                    st.markdown("**ÃƒÂ¢Ã‚ÂÃ…â€™ Skipped:**")
                     for job in skipped_list[:10]:
                         reason = job.get("reason", "")
-                        st.markdown(f"- **{job.get('title')} @ {job.get('company')}** — *{reason}*")
+                        st.markdown(f"- **{job.get('title')} @ {job.get('company')}** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â *{reason}*")
                     if len(skipped_list) > 10:
                         st.caption(f"...and {len(skipped_list) - 10} more")
 
                 # HR invites processed in this run
                 hr_invites = run.get("hr_invites", [])
                 if hr_invites:
-                    st.markdown("**🔥 HR Invites Processed:**")
+                    st.markdown("**ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ HR Invites Processed:**")
                     for inv in hr_invites:
-                        status = "✅ Applied" if inv.get("applied") else "⏭️ Skipped"
+                        status = "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Applied" if inv.get("applied") else "ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â Skipped"
                         st.markdown(
-                            f"- {status} — **{inv.get('title')} @ {inv.get('company')}**"
+                            f"- {status} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **{inv.get('title')} @ {inv.get('company')}**"
                             + (f" (HR: {inv.get('hr_name')})" if inv.get("hr_name") else "")
                         )
 
                 errors = run.get("errors", [])
                 if errors:
-                    st.markdown("**⚠️ Errors:**")
+                    st.markdown("**ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Errors:**")
                     for e in errors:
                         st.caption(e)
 
 
 # =============================================================================
-# TAB 4 — RECRUITER INBOX
+# TAB 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â RECRUITER INBOX
 # =============================================================================
 with tab_inbox:
     st.markdown("### Recruiter Inbox")
     st.caption(
-        "HR invites detected by CareerOS — from Gmail monitor (real-time) "
+        "HR invites detected by CareerOS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â from Gmail monitor (real-time) "
         "and from Naukri inbox check (on every scheduled run)."
     )
 
     st.markdown("""
     <div class="warning-box">
-        🔥 <strong>Why this tab matters:</strong> An HR invite has 10x higher callback rate than
+        ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ <strong>Why this tab matters:</strong> An HR invite has 10x higher callback rate than
         a cold application. CareerOS detects these automatically and applies on your behalf
-        within minutes — before the HR moves on.
+        within minutes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â before the HR moves on.
     </div>
     """, unsafe_allow_html=True)
 
     # Gmail Monitor setup card
-    with st.expander("📧 Set Up Gmail Monitor (one-time, 2 minutes)", expanded=False):
+    with st.expander("ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â§ Set Up Gmail Monitor (one-time, 2 minutes)", expanded=False):
         st.markdown("""
-        The Gmail Monitor runs 24/7 on **Google's own servers** — no laptop needed.
+        The Gmail Monitor runs 24/7 on **Google's own servers** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no laptop needed.
         It detects Naukri HR invites and profile views the moment they hit your inbox.
 
         **Steps:**
         1. Open [script.google.com](https://script.google.com) in your browser
-        2. Click **New project** → paste the script from the Setup tab below
+        2. Click **New project** ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ paste the script from the Setup tab below
         3. Set your `MAKE_WEBHOOK_URL` at the top of the script (from your config file)
-        4. Click **Run → setupTrigger()** → authorize when prompted
+        4. Click **Run ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ setupTrigger()** ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ authorize when prompted
         5. Done. It runs every 5 minutes forever.
         """)
         st.code(
@@ -524,7 +571,7 @@ with tab_inbox:
         st.markdown("""
         <div style="background:#F8FAFC;border-radius:12px;padding:24px;
                     text-align:center;color:#6B7280;margin-top:16px;">
-            <div style="font-size:2.5rem;">📭</div>
+            <div style="font-size:2.5rem;">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â­</div>
             <div style="font-size:0.95rem;font-weight:600;margin-top:12px;">Inbox empty</div>
             <div style="font-size:0.85rem;margin-top:6px;">
                 Set up the Gmail Monitor above and keep your Naukri profile active.<br>
@@ -556,15 +603,15 @@ with tab_inbox:
         for inv in unique_invites:
             applied_flag = inv.get("applied", False)
             status_pill  = (
-                '<span class="applied-pill">✅ Applied</span>'
+                '<span class="applied-pill">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Applied</span>'
                 if applied_flag else
-                '<span class="skipped-pill">⏭️ Skipped</span>'
+                '<span class="skipped-pill">ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â Skipped</span>'
             )
             url  = inv.get("url", "")
             link = f"[{inv.get('title','Role')} @ {inv.get('company','')}]({url})" if url else f"{inv.get('title','Role')} @ {inv.get('company','')}"
             date = inv.get("detected_at", "")
 
-            with st.expander(f"{'🔥' if applied_flag else '👀'} {inv.get('company','Unknown')} — {inv.get('title','Unknown role')}"):
+            with st.expander(f"{'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥' if applied_flag else 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ¢â€šÂ¬'} {inv.get('company','Unknown')} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {inv.get('title','Unknown role')}"):
                 st.markdown(status_pill, unsafe_allow_html=True)
                 if inv.get("hr_name"):
                     st.markdown(f"**HR:** {inv.get('hr_name')}")
