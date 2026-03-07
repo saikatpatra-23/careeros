@@ -166,7 +166,7 @@ def _render_followup_form(question_specs: list[dict], existing_answers: dict) ->
     return answers
 
 
-st.set_page_config(page_title="Profile Optimizer - CareerOS", page_icon="??", layout="wide")
+st.set_page_config(page_title="Profile Optimizer - CareerOS", page_icon="P", layout="wide")
 require_login()
 inject_global_css()
 
@@ -175,7 +175,7 @@ store = UserStore(email)
 profile = store.load_profile()
 prefs = store.load_apply_prefs()
 
-st.markdown('<div class="pg-title"><span class="pg-icon">??</span><span class="pg-name">Profile Optimizer</span><span class="pg-sub">Naukri + LinkedIn content engine</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-icon">PO</span><span class="pg-name">Profile Optimizer</span><span class="pg-sub">Naukri + LinkedIn content engine</span></div>', unsafe_allow_html=True)
 
 resume_saved = store.load_resume()
 resume_data = resume_saved.get("structured_data", {})
@@ -191,7 +191,7 @@ if not resume_data:
         """,
         unsafe_allow_html=True,
     )
-    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder", icon="??")
+    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder")
     st.markdown('<div class="co-upload-shell">', unsafe_allow_html=True)
     st.markdown('<div class="co-section-kicker">Resume Import</div><div class="co-section-title">Upload your current resume</div>', unsafe_allow_html=True)
     uploaded = st.file_uploader(
@@ -368,7 +368,7 @@ with tab_naukri:
         st.markdown('<div class="co-section-kicker">Updater</div><div class="co-section-title">Push this draft into Naukri</div>', unsafe_allow_html=True)
         if not profile.get("naukri_email") or not profile.get("naukri_pass_enc"):
             st.warning("Save your Naukri credentials on the Setup page first. Then come back here to download the updater.")
-            st.page_link("pages/0_Setup.py", label="Go to Setup", icon="??")
+            st.page_link("pages/0_Setup.py", label="Go to Setup")
         else:
             updater_zip = _build_naukri_updater_zip(email, profile, prefs, resume_saved, naukri_data)
             st.download_button(

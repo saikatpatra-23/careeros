@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 st.set_page_config(
     page_title="CareerOS",
-    page_icon="??",
+    page_icon="C",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -64,7 +64,7 @@ header_cols = st.columns([4.5, 1.2, 1.2])
 with header_cols[0]:
     st.markdown(f'<div class="co-tip">{random.choice(tips)}</div>', unsafe_allow_html=True)
 with header_cols[1]:
-    st.page_link("pages/2_Profile_Optimizer.py", label="Open Optimizer", icon="??")
+    st.page_link("pages/2_Profile_Optimizer.py", label="Open Optimizer")
 with header_cols[2]:
     if st.button("Sign out", use_container_width=True):
         st.logout()
@@ -78,7 +78,7 @@ core_cards = [
         "badge_text": "Done" if has_res else "Start here",
         "body": "Create or import a resume, structure it, and give CareerOS a reliable source of truth.",
         "link": "pages/1_Resume_Builder.py",
-        "icon": "??",
+        "icon": "[RB]",
     },
     {
         "title": "Profile Optimizer",
@@ -86,7 +86,7 @@ core_cards = [
         "badge_text": "Ready" if has_opt else "Recommended",
         "body": "Answer a few high-signal questions and turn your resume into a recruiter-facing Naukri + LinkedIn draft.",
         "link": "pages/2_Profile_Optimizer.py",
-        "icon": "??",
+        "icon": "[PO]",
     },
     {
         "title": "ATS Checker",
@@ -94,7 +94,7 @@ core_cards = [
         "badge_text": "Ready" if has_res else "Needs resume",
         "body": "Check how close a specific JD is to your current resume before you apply.",
         "link": "pages/4_ATS_Checker.py",
-        "icon": "??",
+        "icon": "[ATS]",
     },
     {
         "title": "Smart Apply",
@@ -102,7 +102,7 @@ core_cards = [
         "badge_text": "Automation" if has_res else "Needs resume",
         "body": "Run Naukri search and apply workflows once your profile and targeting are dialed in.",
         "link": "pages/5_Smart_Apply.py",
-        "icon": "??",
+        "icon": "[SA]",
     },
 ]
 
@@ -118,7 +118,7 @@ for col, card in zip(core_cols, core_cards):
             """,
             unsafe_allow_html=True,
         )
-        st.page_link(card["link"], label=f"Open {card['title']}", icon=card["icon"])
+        st.page_link(card["link"], label=f"Open {card['title']}")
 
 st.divider()
 
@@ -131,7 +131,7 @@ utility_cards = [
         "badge_text": f"{cl_count} saved" if cl_count else "Ready",
         "body": "Generate job-specific cover letters in seconds once your base profile is strong.",
         "link": "pages/6_Cover_Letter.py",
-        "icon": "??",
+        "icon": "[CL]",
     },
     {
         "title": "Role Clarity",
@@ -139,7 +139,7 @@ utility_cards = [
         "badge_text": "Strategy",
         "body": "Narrow vague career intent into a sharper role direction before profile generation.",
         "link": "pages/3_Role_Clarity.py",
-        "icon": "??",
+        "icon": "[RC]",
     },
     {
         "title": "Setup",
@@ -147,7 +147,7 @@ utility_cards = [
         "badge_text": "Profile",
         "body": "Store Naukri credentials, notification routing, and basic job preferences.",
         "link": "pages/0_Setup.py",
-        "icon": "??",
+        "icon": "[SU]",
     },
 ]
 
@@ -163,6 +163,6 @@ for col, card in zip(utility_cols, utility_cards):
             """,
             unsafe_allow_html=True,
         )
-        st.page_link(card["link"], label=f"Open {card['title']}", icon=card["icon"])
+        st.page_link(card["link"], label=f"Open {card['title']}")
 
 st.caption("CareerOS | India-focused job operating system | Claude-powered | Personal data stored per user")

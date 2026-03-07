@@ -1029,3 +1029,10 @@ aukri_profile_data and ships update_profile.py.
 - Employment matching broadened for company-name variants.
 - Live verification completed successfully: headline, summary, skills, preferred locations, and both employment descriptions saved in one run.
 - Verification artifact: `job_applier/logs/profile_update_20260307_211110.log` with final screenshot `profile_updated_20260307_211314.png`.
+
+[2026-03-07] UI smoke-pass note:
+- Local Streamlit app boots successfully on localhost, but full logged-in manual UI validation is blocked unless `.streamlit/secrets.toml` includes the `[auth]` block for Google OAuth.
+- Fixed auth gate styling in `auth.py` so logged-out/local-error state now uses the shared CareerOS theme instead of the default dark Streamlit shell.
+- Visual smoke artifact: `ui_smoke/dashboard_auth_gate_after_fix.png`.
+
+[2026-03-07 22:20 IST] Patch: fixed production Streamlit crash caused by invalid st.page_link icon value ('??'). Updated dashboard/profile links to valid icon-safe usage and moved global CSS to black/dark high-contrast visual system for readability.

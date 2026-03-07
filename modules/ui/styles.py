@@ -9,21 +9,21 @@ GLOBAL_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
 
 :root {
-    --bg: #f5efe6;
-    --bg-soft: #fbf8f3;
-    --surface: rgba(255,255,255,0.82);
-    --surface-strong: rgba(255,255,255,0.94);
-    --surface-dark: #182028;
-    --line: rgba(24,32,40,0.10);
-    --line-strong: rgba(24,32,40,0.16);
-    --text: #182028;
-    --muted: #5f6b76;
-    --accent: #ef6c2f;
-    --accent-soft: rgba(239,108,47,0.12);
-    --accent-2: #127a72;
-    --success: #1f8f63;
-    --warning: #b7791f;
-    --shadow: 0 20px 45px rgba(24,32,40,0.08);
+    --bg: #060b16;
+    --bg-soft: #0b1324;
+    --surface: rgba(14,20,36,0.90);
+    --surface-strong: rgba(19,27,46,0.96);
+    --surface-dark: #0c1324;
+    --line: rgba(148,163,184,0.20);
+    --line-strong: rgba(148,163,184,0.30);
+    --text: #e6edf7;
+    --muted: #a7b4c8;
+    --accent: #4f8ef7;
+    --accent-soft: rgba(79,142,247,0.18);
+    --accent-2: #2db8a0;
+    --success: #2db86d;
+    --warning: #f0b24d;
+    --shadow: 0 24px 50px rgba(0,0,0,0.38);
     --radius-xl: 28px;
     --radius-lg: 20px;
     --radius-md: 14px;
@@ -35,9 +35,9 @@ html, body, [class*="css"] {
 }
 body, .stApp {
     background:
-        radial-gradient(circle at top left, rgba(239,108,47,0.15), transparent 28%),
-        radial-gradient(circle at top right, rgba(18,122,114,0.10), transparent 24%),
-        linear-gradient(180deg, #f2eadf 0%, #f6f4ef 45%, #fbfaf7 100%);
+        radial-gradient(circle at top left, rgba(79,142,247,0.20), transparent 30%),
+        radial-gradient(circle at top right, rgba(45,184,160,0.14), transparent 26%),
+        linear-gradient(180deg, #050a14 0%, #091224 48%, #0b1327 100%);
 }
 #MainMenu, footer { visibility: hidden; }
 
@@ -84,7 +84,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     align-items: center;
     justify-content: center;
     border-radius: 14px;
-    background: var(--surface-strong);
+    background: rgba(79,142,247,0.18);
     box-shadow: var(--shadow);
     font-size: 1.1rem;
 }
@@ -94,8 +94,8 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
 .co-hero {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,248,240,0.95));
-    border: 1px solid rgba(255,255,255,0.7);
+    background: linear-gradient(145deg, rgba(18,26,44,0.96), rgba(12,19,34,0.96));
+    border: 1px solid rgba(148,163,184,0.20);
     border-radius: var(--radius-xl);
     padding: 26px 28px;
     box-shadow: var(--shadow);
@@ -109,7 +109,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     border-radius: 999px;
     right: -80px;
     top: -80px;
-    background: radial-gradient(circle, rgba(239,108,47,0.18), transparent 70%);
+    background: radial-gradient(circle, rgba(79,142,247,0.25), transparent 70%);
 }
 .co-hero-badge {
     display: inline-flex;
@@ -148,8 +148,8 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     gap: 8px;
     padding: 9px 12px;
     border-radius: 999px;
-    background: rgba(24,32,40,0.05);
-    border: 1px solid rgba(24,32,40,0.06);
+    background: rgba(148,163,184,0.14);
+    border: 1px solid rgba(148,163,184,0.24);
     color: var(--text);
     font-size: 0.9rem;
 }
@@ -171,7 +171,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
 
 .co-card, [data-testid="stMetric"] {
     background: var(--surface);
-    border: 1px solid rgba(255,255,255,0.72);
+    border: 1px solid rgba(148,163,184,0.22);
     border-radius: var(--radius-lg);
     padding: 18px 20px;
     box-shadow: var(--shadow);
@@ -185,7 +185,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(24,32,40,0.05);
+    background: rgba(148,163,184,0.16);
     color: var(--muted);
     border: 1px solid rgba(24,32,40,0.08);
     border-radius: 999px;
@@ -207,8 +207,8 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
 .co-check {
     padding: 10px 12px;
     border-radius: 12px;
-    background: rgba(24,32,40,0.04);
-    border: 1px solid rgba(24,32,40,0.06);
+    background: rgba(148,163,184,0.12);
+    border: 1px solid rgba(148,163,184,0.18);
     font-size: 0.92rem;
 }
 
@@ -216,24 +216,24 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     border-radius: 14px !important;
 }
 .co-info {
-    background: rgba(18,122,114,0.08);
+    background: rgba(45,184,160,0.16);
     border-left: 3px solid var(--accent-2);
-    color: #0f5f59;
+    color: #b9f3e8;
     padding: 12px 14px;
     line-height: 1.6;
 }
 .co-tip {
-    background: rgba(239,108,47,0.08);
+    background: rgba(79,142,247,0.16);
     border-left: 3px solid var(--accent);
-    color: #9a5128;
+    color: #c9dcff;
     padding: 12px 14px;
     line-height: 1.6;
 }
 
 .co-upload-shell {
-    border: 1.5px dashed rgba(24,32,40,0.16);
+    border: 1.5px dashed rgba(148,163,184,0.36);
     border-radius: 22px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.66));
+    background: linear-gradient(180deg, rgba(14,20,36,0.86), rgba(14,20,36,0.74));
     padding: 18px;
 }
 
@@ -253,9 +253,9 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     box-shadow: 0 12px 24px rgba(239,108,47,0.20) !important;
 }
 [data-testid="baseButton-secondary"] {
-    background: rgba(24,32,40,0.05) !important;
+    background: rgba(148,163,184,0.12) !important;
     color: var(--text) !important;
-    border: 1px solid rgba(24,32,40,0.08) !important;
+    border: 1px solid rgba(148,163,184,0.26) !important;
     border-radius: 14px !important;
     font-weight: 700 !important;
 }
@@ -273,14 +273,15 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
 [data-baseweb="select"] > div,
 [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
     border-radius: 14px !important;
-    border: 1px solid rgba(24,32,40,0.10) !important;
-    background: rgba(255,255,255,0.86) !important;
+    border: 1px solid rgba(148,163,184,0.30) !important;
+    background: rgba(10,16,30,0.92) !important;
+    color: var(--text) !important;
 }
 .stTextArea textarea {
     min-height: 120px;
 }
 .stTextArea textarea:disabled {
-    background: rgba(248,246,241,0.9) !important;
+    background: rgba(11,18,33,0.95) !important;
     color: var(--text) !important;
     opacity: 1 !important;
     line-height: 1.65 !important;
@@ -292,8 +293,8 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
 [data-testid="stTabs"] [data-testid="stTab"] {
     border-radius: 999px !important;
     padding: 10px 16px !important;
-    background: rgba(24,32,40,0.04) !important;
-    border: 1px solid rgba(24,32,40,0.06) !important;
+    background: rgba(148,163,184,0.10) !important;
+    border: 1px solid rgba(148,163,184,0.18) !important;
 }
 [data-testid="stTabs"] [aria-selected="true"] {
     background: rgba(239,108,47,0.10) !important;
@@ -302,13 +303,13 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
 }
 
 [data-testid="stExpander"] {
-    border: 1px solid rgba(24,32,40,0.08) !important;
+    border: 1px solid rgba(148,163,184,0.20) !important;
     border-radius: 18px !important;
     overflow: hidden !important;
-    background: rgba(255,255,255,0.74) !important;
+    background: rgba(13,20,36,0.90) !important;
 }
 
-hr { border-color: rgba(24,32,40,0.08) !important; margin: 18px 0 !important; }
+hr { border-color: rgba(148,163,184,0.24) !important; margin: 18px 0 !important; }
 
 @media (max-width: 768px) {
     .co-hero { padding: 22px 18px; }
