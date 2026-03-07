@@ -70,6 +70,10 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     background: rgba(255,255,255,0.08) !important;
 }
+/* Internal-only page: hide from default sidebar navigation */
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="api_ingest"] {
+    display: none !important;
+}
 
 .pg-title {
     display: flex;
