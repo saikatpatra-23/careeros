@@ -1046,3 +1046,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-07 23:20 IST] Security hardening: api_ingest treated as internal endpoint. Hidden from normal sidebar navigation; direct manual access now returns Not found unless logged-in admin email is allowlisted. Token-based sync path unchanged.
 
 [2026-03-07 23:40 IST] Observability update: CareerOS now logs user login, page navigation, and error events to local telemetry store. Added internal Admin Analytics page for monitoring beta user activity and debugging failures.
+
+[2026-03-07 23:48 IST] Added admin-only nav visibility for telemetry page; beta users no longer see Admin Analytics entry in sidebar.
