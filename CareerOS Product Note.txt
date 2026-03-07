@@ -1052,3 +1052,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 00:05 IST] Admin access reliability fix: standardized admin-email parsing and centralised is_admin_user() checks for analytics/auth visibility controls.
 
 [2026-03-08 00:20 IST] Admin Analytics access check now supports varied secrets structures for admin allowlist, reducing false unauthorized errors in Streamlit Cloud.
+
+[2026-03-08 00:35 IST] Admin auth hardening v2: allowlist extraction now supports non-standard secrets/env key shapes to avoid false unauthorized states.

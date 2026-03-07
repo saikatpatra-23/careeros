@@ -6,6 +6,7 @@ Uses Streamlit's native st.login() (requires Streamlit 1.41+ with [auth] secrets
 import streamlit as st
 from config import _get_secret
 from modules.telemetry.tracker import track_login
+import os
 
 
 def _nested_get(container, path: tuple[str, ...]):
@@ -39,6 +40,28 @@ def _parse_admin_emails(raw) -> set[str]:
         if email:
             admins.add(email)
     return admins
+
+
+def _collect_secret_kv() -> dict[str, object]:
+    flat: dict[str, object] = {}
+    try:
+        secrets_obj = st.secrets
+    except Exception:
+        return flat
+
+    def _walk(prefix: str, obj):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                key = f"{prefix}.{k}" if prefix else str(k)
+                _walk(key, v)
+            return
+        flat[prefix.lower()] = obj
+
+    try:
+        _walk("", secrets_obj)
+    except Exception:
+        pass
+    return flat
 
 
 def get_admin_emails() -> set[str]:
@@ -88,6 +111,28 @@ def get_admin_emails() -> set[str]:
 
         for raw in candidates:
             parsed |= _parse_admin_emails(raw)
+
+    # Tertiary path: scan flattened secrets/env with case-insensitive key matching.
+    flat = _collect_secret_kv()
+    for key, value in flat.items():
+        if (
+            "internal_admin_emails" in key
+            or key.endswith("admin_emails")
+            or key.endswith("owner_email")
+        ):
+            parsed |= _parse_admin_emails(value)
+
+    for env_key, env_val in os.environ.items():
+        k = env_key.strip().lower()
+        if (
+            k == "internal_admin_emails"
+            or k == "admin_emails"
+            or k == "owner_email"
+            or k.endswith("_internal_admin_emails")
+            or k.endswith("_admin_emails")
+            or k.endswith("_owner_email")
+        ):
+            parsed |= _parse_admin_emails(env_val)
 
     return parsed
 
