@@ -4,6 +4,7 @@ Google OAuth gate for CareerOS.
 Uses Streamlit's native st.login() (requires Streamlit 1.41+ with [auth] secrets configured).
 """
 import streamlit as st
+from modules.telemetry.tracker import track_login
 
 
 def require_login() -> None:
@@ -32,6 +33,10 @@ def require_login() -> None:
         return
 
     if logged_in:
+        try:
+            track_login(getattr(st.user, "email", ""), getattr(st.user, "name", ""))
+        except Exception:
+            pass
         return
 
     st.markdown(

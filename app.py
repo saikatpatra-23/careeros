@@ -15,6 +15,7 @@ st.set_page_config(
 )
 
 from auth import get_user_email, get_user_name, require_login
+from modules.telemetry.tracker import install_error_tracking, track_page_view
 from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 
@@ -23,6 +24,8 @@ inject_global_css()
 
 email = get_user_email()
 name = get_user_name()
+install_error_tracking(email=email, page="Dashboard")
+track_page_view(email=email, page="Dashboard")
 store = UserStore(email)
 summary = store.summary()
 first_name = name.split()[0] if name else "there"

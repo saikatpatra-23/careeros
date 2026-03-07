@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import streamlit as st
 from datetime import datetime
 from auth import require_login, get_user_email
+from modules.telemetry.tracker import install_error_tracking, log_error, track_page_view
 from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 from modules.coverletter.generator import generate_cover_letter
@@ -18,6 +19,8 @@ require_login()
 inject_global_css()
 
 email = get_user_email()
+install_error_tracking(email=email, page="Cover Letter")
+track_page_view(email=email, page="Cover Letter")
 store = UserStore(email)
 
 # ── Styles ────────────────────────────────────────────────────────────────────
@@ -176,6 +179,7 @@ with tab_gen:
                 st.session_state["last_cover_letter"] = result
 
             except Exception as e:
+                log_error(email=email, page="Cover Letter", exc=e, handled=True)
                 st.error(f"Generation failed: {e}")
 
     # ── Display result ────────────────────────────────────────────────────────

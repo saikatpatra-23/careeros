@@ -10,12 +10,16 @@ import json, re
 import streamlit as st
 import anthropic
 from auth import require_login, get_user_email
+from modules.telemetry.tracker import install_error_tracking, log_error, track_page_view
 from modules.ui.styles import inject_global_css
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 
 st.set_page_config(page_title="Role Clarity – CareerOS", page_icon="💡", layout="centered")
 require_login()
 inject_global_css()
+email = get_user_email()
+install_error_tracking(email=email, page="Role Clarity")
+track_page_view(email=email, page="Role Clarity")
 
 st.markdown("""
 <style>
@@ -108,6 +112,7 @@ if submitted and all([q1.strip(), q2.strip(), q3.strip(), q4.strip()]):
             cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`").strip()
             result  = json.loads(cleaned[cleaned.find("{"):cleaned.rfind("}")+1])
         except Exception as e:
+            log_error(email=email, page="Role Clarity", exc=e, handled=True)
             st.error(f"Error: {e}")
             st.stop()
 

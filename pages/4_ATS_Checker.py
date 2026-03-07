@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email
+from modules.telemetry.tracker import install_error_tracking, log_error, track_page_view
 from persistence.store import UserStore
 from modules.ats.checker import check_ats
 from modules.resume.parser import (
@@ -22,6 +23,8 @@ require_login()
 inject_global_css()
 
 email = get_user_email()
+install_error_tracking(email=email, page="ATS Checker")
+track_page_view(email=email, page="ATS Checker")
 store = UserStore(email)
 
 # ── Styles ────────────────────────────────────────────────────────────────────
@@ -101,6 +104,7 @@ if not resume_data and not st.session_state.ats_uploaded_resume:
                 st.session_state.ats_uploaded_resume = parsed
                 st.rerun()
             except Exception as e:
+                log_error(email=email, page="ATS Checker", exc=e, handled=True)
                 st.error(f"Could not parse resume: {e}")
     st.stop()
 
@@ -137,6 +141,7 @@ with col_upload_alt:
                     resume_data = parsed
                     st.rerun()
                 except Exception as e:
+                    log_error(email=email, page="ATS Checker", exc=e, handled=True)
                     st.error(f"Parse failed: {e}")
 
 st.divider()
@@ -164,6 +169,7 @@ if analyse and jd.strip():
         try:
             result = check_ats(resume_data, jd.strip(), ANTHROPIC_API_KEY)
         except Exception as e:
+            log_error(email=email, page="ATS Checker", exc=e, handled=True)
             st.error(f"Analysis failed: {e}")
             st.stop()
 

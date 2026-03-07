@@ -1044,3 +1044,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-07 23:10 IST] Added beta-user troubleshooting content under Naukri updater workflow with actionable recovery steps and log-sharing guidance.
 
 [2026-03-07 23:20 IST] Security hardening: api_ingest treated as internal endpoint. Hidden from normal sidebar navigation; direct manual access now returns Not found unless logged-in admin email is allowlisted. Token-based sync path unchanged.
+
+[2026-03-07 23:40 IST] Observability update: CareerOS now logs user login, page navigation, and error events to local telemetry store. Added internal Admin Analytics page for monitoring beta user activity and debugging failures.

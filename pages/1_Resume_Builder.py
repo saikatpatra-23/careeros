@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email, get_user_name
+from modules.telemetry.tracker import install_error_tracking, log_error, track_page_view
 from persistence.store import UserStore
 from modules.resume.session import ResumeBuilderSession
 from modules.resume.word_export import export_to_docx, get_filename
@@ -101,6 +102,8 @@ st.markdown("""
 
 email = get_user_email()
 name  = get_user_name()
+install_error_tracking(email=email, page="Resume Builder")
+track_page_view(email=email, page="Resume Builder")
 store = UserStore(email)
 
 # Purge stale draft (>7 days idle) silently on every page load
@@ -266,6 +269,7 @@ It will ask about your work, your achievements, and what makes you good at what 
                     st.session_state.rb_step   = 3
                     st.rerun()
                 except Exception as e:
+                    log_error(email=email, page="Resume Builder", exc=e, handled=True)
                     st.error(f"Could not parse resume: {e}")
 
     with col_how:
@@ -343,6 +347,7 @@ if st.session_state.rb_step == 2:
                 try:
                     reply = session.send(user_input.strip())
                 except Exception as e:
+                    log_error(email=email, page="Resume Builder", exc=e, handled=True)
                     st.error(f"API error: {e}")
                     st.stop()
             st.markdown(reply)
@@ -365,6 +370,7 @@ if st.session_state.rb_step == 2:
                     try:
                         resume_data = session.generate_resume()
                     except Exception as e:
+                        log_error(email=email, page="Resume Builder", exc=e, handled=True)
                         st.error(f"Generation failed: {e}")
                         st.stop()
                 store.save_resume({
@@ -478,6 +484,7 @@ if st.session_state.rb_step == 3:
                 try:
                     st.session_state.rb_doc_bytes = export_to_docx(resume_data)
                 except Exception as e:
+                    log_error(email=email, page="Resume Builder", exc=e, handled=True)
                     st.error(f"Export failed: {e}")
         if st.session_state.rb_doc_bytes:
             st.download_button(
@@ -494,6 +501,7 @@ if st.session_state.rb_step == 3:
                 try:
                     st.session_state.rb_pdf_bytes = export_to_pdf(resume_data)
                 except Exception as e:
+                    log_error(email=email, page="Resume Builder", exc=e, handled=True)
                     st.error(f"PDF export failed: {e}")
         if st.session_state.rb_pdf_bytes:
             st.download_button(

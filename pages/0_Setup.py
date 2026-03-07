@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email, get_user_name
+from modules.telemetry.tracker import install_error_tracking, track_page_view
 from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 from config import _get_secret
@@ -22,6 +23,8 @@ inject_global_css()
 
 email = get_user_email()
 name  = get_user_name()
+install_error_tracking(email=email, page="Setup")
+track_page_view(email=email, page="Setup")
 store = UserStore(email)
 
 st.markdown("""

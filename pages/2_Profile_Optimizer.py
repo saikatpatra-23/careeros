@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from auth import require_login, get_user_email
+from modules.telemetry.tracker import install_error_tracking, log_error, track_page_view
 from persistence.store import UserStore
 from modules.profile.naukri_enrichment import (
     build_naukri_resume_context,
@@ -180,6 +181,8 @@ require_login()
 inject_global_css()
 
 email = get_user_email()
+install_error_tracking(email=email, page="Profile Optimizer")
+track_page_view(email=email, page="Profile Optimizer")
 store = UserStore(email)
 profile = store.load_profile()
 prefs = store.load_apply_prefs()
@@ -234,6 +237,7 @@ if not resume_data:
                 st.success("Resume parsed. Refreshing your optimizer...")
                 st.rerun()
             except Exception as exc:
+                log_error(email=email, page="Profile Optimizer", exc=exc, handled=True)
                 st.error(f"Could not parse resume: {exc}")
     st.stop()
 
@@ -274,6 +278,7 @@ with left:
                     st.success("Naukri draft generated.")
                     st.rerun()
                 except Exception as exc:
+                    log_error(email=email, page="Profile Optimizer", exc=exc, handled=True)
                     st.error(f"Could not generate Naukri profile content: {exc}")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -317,6 +322,7 @@ with tab_naukri:
                     store.save_profile_optimizer(saved_opt)
                     st.rerun()
                 except Exception as exc:
+                    log_error(email=email, page="Profile Optimizer", exc=exc, handled=True)
                     st.error(f"Error: {exc}")
     with action_cols[1]:
         st.caption("Use this after changing answers or target roles.")
@@ -429,6 +435,7 @@ with tab_linkedin:
                     store.save_profile_optimizer(saved_opt)
                     st.rerun()
                 except Exception as exc:
+                    log_error(email=email, page="Profile Optimizer", exc=exc, handled=True)
                     st.error(f"Error: {exc}")
     else:
         if st.button("Regenerate LinkedIn Draft"):
@@ -439,6 +446,7 @@ with tab_linkedin:
                     store.save_profile_optimizer(saved_opt)
                     st.rerun()
                 except Exception as exc:
+                    log_error(email=email, page="Profile Optimizer", exc=exc, handled=True)
                     st.error(f"Error: {exc}")
 
     if linkedin_data:
