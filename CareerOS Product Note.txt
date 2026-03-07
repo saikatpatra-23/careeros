@@ -986,7 +986,8 @@ etworkidle after Login click.
 
 [2026-03-07 17:14 IST] Scheduler verification
 - CareerOS local automation is operational.
-- Windows Task Scheduler already contains direct un.py jobs for morning/afternoon, and a duplicate second pair with similar names.
+- Windows Task Scheduler already contains direct 
+un.py jobs for morning/afternoon, and a duplicate second pair with similar names.
 - watcher.py was also started successfully and created watcher.lock plus watcher.log.
 - This confirms automation works, but there are currently two scheduler layers in play (Task Scheduler direct runs + watcher), which should be consolidated to avoid duplicate executions.
 
@@ -1008,3 +1009,23 @@ aukri_profile_data and ships update_profile.py.
 - Real account run completed successfully for login, headline update, and key skills save.
 - Remaining failing sections on current Naukri DOM: profile summary, preferred locations, employment descriptions.
 - This confirms the updater architecture is valid; remaining work is selector hardening, not feature design.
+
+[2026-03-07] Naukri updater selector hardening pass:
+- update_profile.py patched with lazy-section hydration, quick-link follow-up edit clicks, form waits, and scoped debug dumps.
+- Live verification: headline updated, profile summary updated, key skills updated.
+- Employment selectors improved: at least one employment description save confirmed live; one company-specific entry still needs broader matching hardening.
+- Preferred locations still unresolved: Career profile editor is not consistently surfacing from current selectors/quick-link path, so this remains pending.
+
+[2026-03-07] Resume-to-Naukri enrichment + UI revamp pass:
+- Added `modules/profile/naukri_enrichment.py` to define targeted follow-up questions (roles, cities, notice period, CTC, work mode, industries, missing wins) and build enriched Naukri context from uploaded/saved resume data.
+- Rebuilt `pages/2_Profile_Optimizer.py` into a guided flow: resume import fallback, follow-up questions, context preview, Naukri draft generation, and updater download.
+- Reworked shared UI theme in `modules/ui/styles.py` toward a modern SaaS-style warm-neutral surface with stronger hierarchy, card surfaces, improved tabs/buttons/forms, and a more product-like dashboard feel.
+- Refreshed `app.py` dashboard to match the new visual system and clearer user journey.
+- Verification: `py_compile` passed for app.py, 2_Profile_Optimizer.py, styles.py, and naukri_enrichment.py.
+- Remaining functional gap: Naukri updater preferred-locations selector still needs hardening; summary/headline/skills are working, employment is improved but still needs one broader selector pass for full reliability.
+
+[2026-03-07] Naukri updater final selector pass:
+- Preferred locations selector fixed against the real `Career profile` modal (`#lazyDesiredProfile` + `#locationSugg` + `#saveDesiredProfile`).
+- Employment matching broadened for company-name variants.
+- Live verification completed successfully: headline, summary, skills, preferred locations, and both employment descriptions saved in one run.
+- Verification artifact: `job_applier/logs/profile_update_20260307_211110.log` with final screenshot `profile_updated_20260307_211314.png`.
