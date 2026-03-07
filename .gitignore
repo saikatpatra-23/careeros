@@ -1,13 +1,25 @@
-# Secrets — never commit these
+# Secrets - never commit these
 .env
+.env.*
 .streamlit/secrets.toml
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
-# User data — stays on server
+# User data - stays on server
 data/
 
-# Local runner config — each user generates their own from the web app
+# Local runner config and runtime artifacts
 job_applier/config.json
 job_applier/logs/
+job_applier/watcher_state.json
+job_applier/trigger.txt
+job_applier/*.zip
+job_applier/*.html
+job_applier/*.png
+job_applier/*.log
 
 # Python
 __pycache__/
@@ -18,8 +30,29 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
 
 # IDE
 .vscode/
 .idea/
 *.swp
+
+# OS / tooling noise
+.DS_Store
+Thumbs.db
+
+# Local generated archives and backups
+*.zip
+*.bak
+
+# Root junk files accidentally created by shell/tools
+-r
+0.42.0
+1d9fd69b9775
+2.31.0
+42.0.0
+5414db548514
+e36ba1b0df94
+fc969aa5666c
+Removed
+Running
