@@ -1048,3 +1048,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-07 23:40 IST] Observability update: CareerOS now logs user login, page navigation, and error events to local telemetry store. Added internal Admin Analytics page for monitoring beta user activity and debugging failures.
 
 [2026-03-07 23:48 IST] Added admin-only nav visibility for telemetry page; beta users no longer see Admin Analytics entry in sidebar.
+
+[2026-03-08 00:05 IST] Admin access reliability fix: standardized admin-email parsing and centralised is_admin_user() checks for analytics/auth visibility controls.

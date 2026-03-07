@@ -8,6 +8,37 @@ from config import _get_secret
 from modules.telemetry.tracker import track_login
 
 
+def _parse_admin_emails(raw) -> set[str]:
+    items: list[str] = []
+    if isinstance(raw, str):
+        normalized = raw.replace(";", ",").replace("\n", ",")
+        items.extend(normalized.split(","))
+    elif isinstance(raw, (list, tuple, set)):
+        for val in raw:
+            if isinstance(val, str):
+                normalized = val.replace(";", ",").replace("\n", ",")
+                items.extend(normalized.split(","))
+    admins = set()
+    for item in items:
+        email = item.strip().strip('"').strip("'").lower()
+        if email:
+            admins.add(email)
+    return admins
+
+
+def get_admin_emails() -> set[str]:
+    raw = (
+        _get_secret("INTERNAL_ADMIN_EMAILS", "")
+        or _get_secret("ADMIN_EMAILS", "")
+        or _get_secret("OWNER_EMAIL", "")
+    )
+    return _parse_admin_emails(raw)
+
+
+def is_admin_user(email: str) -> bool:
+    return email.strip().lower() in get_admin_emails()
+
+
 def require_login() -> None:
     """Block the page if user is not logged in. Show Google login button."""
     from modules.ui.styles import inject_global_css
@@ -39,14 +70,8 @@ def require_login() -> None:
         except Exception:
             pass
         try:
-            admin_raw = (
-                _get_secret("INTERNAL_ADMIN_EMAILS", "")
-                or _get_secret("ADMIN_EMAILS", "")
-                or _get_secret("OWNER_EMAIL", "")
-            )
-            admins = {x.strip().lower() for x in admin_raw.replace(";", ",").split(",") if x.strip()}
             email = getattr(st.user, "email", "").strip().lower()
-            if email not in admins:
+            if not is_admin_user(email):
                 st.markdown(
                     """
                     <style>

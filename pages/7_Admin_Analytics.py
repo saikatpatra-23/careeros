@@ -10,30 +10,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 
-from auth import get_user_email, require_login
-from config import _get_secret
+from auth import get_admin_emails, get_user_email, is_admin_user, require_login
 from modules.telemetry.tracker import read_events, track_page_view
 from modules.ui.styles import inject_global_css
-
-
-def _admin_emails() -> set[str]:
-    raw = (
-        _get_secret("INTERNAL_ADMIN_EMAILS", "")
-        or _get_secret("ADMIN_EMAILS", "")
-        or _get_secret("OWNER_EMAIL", "")
-    )
-    if not raw:
-        return set()
-    return {item.strip().lower() for item in raw.replace(";", ",").split(",") if item.strip()}
-
 
 st.set_page_config(page_title="Admin Analytics - CareerOS", page_icon="A", layout="wide")
 require_login()
 inject_global_css()
 
 email = get_user_email().strip().lower()
-if email not in _admin_emails():
+if not is_admin_user(email):
     st.error("Unauthorized.")
+    st.caption(
+        f"Logged-in email: {email}. "
+        f"Configured admin allowlist entries: {len(get_admin_emails())}. "
+        "Add your email to INTERNAL_ADMIN_EMAILS in Streamlit secrets."
+    )
     st.stop()
 
 track_page_view(email, "Admin Analytics")
