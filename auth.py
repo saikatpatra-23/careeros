@@ -8,15 +8,25 @@ import streamlit as st
 
 def require_login() -> None:
     """Block the page if user is not logged in. Show Google login button."""
+    from modules.ui.styles import inject_global_css
 
-    # Guard: [auth] section not yet configured in secrets.toml
+    inject_global_css()
+
     try:
         logged_in = st.user.is_logged_in
     except AttributeError:
-        st.error(
-            "**OAuth not configured.** "
-            "Add the `[auth]` section to Streamlit Cloud secrets. "
-            "See `.streamlit/secrets.toml.example` for the required format."
+        st.markdown(
+            """
+            <div class="co-hero" style="margin-top: 24px;">
+                <span class="co-hero-badge">Local Setup Needed</span>
+                <div class="co-hero-title">OAuth is not configured on this machine</div>
+                <div class="co-hero-copy">
+                    Add the <code>[auth]</code> section to <code>.streamlit/secrets.toml</code> using
+                    <code>.streamlit/secrets.toml.example</code> as the template, then restart Streamlit.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
         st.stop()
         return
@@ -24,28 +34,43 @@ def require_login() -> None:
     if logged_in:
         return
 
-    st.markdown("""
-    <div style='max-width:420px; margin: 80px auto; text-align:center;'>
-        <h1 style='color:#1B4F9C; font-size:2rem;'>CareerOS</h1>
-        <p style='color:#555; font-size:1rem; margin-bottom:8px;'>
-            Your AI-powered career coach for the Indian job market.
-        </p>
-        <p style='color:#888; font-size:0.85rem;'>
-            Resume building &bull; Role clarity &bull; Naukri &amp; LinkedIn optimization
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="co-hero" style="margin-top: 24px;">
+            <span class="co-hero-badge">CareerOS Access</span>
+            <div class="co-hero-title">Your AI job-search operating system for India</div>
+            <div class="co-hero-copy">
+                Build a sharper resume, convert it into recruiter-facing Naukri and LinkedIn content,
+                and automate the repetitive parts of your search from one focused workspace.
+            </div>
+            <div class="co-inline-stats">
+                <span class="co-pill">Resume Builder</span>
+                <span class="co-pill">Profile Optimizer</span>
+                <span class="co-pill">ATS Checker</span>
+                <span class="co-pill">Smart Apply</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <div class="co-card" style="max-width: 520px; margin: 0 auto 16px auto; text-align: center;">
+            <span class="co-badge live">Google OAuth</span>
+            <h3 style="margin: 6px 0 10px 0;">Sign in to open your CareerOS workspace</h3>
+            <p class="co-muted" style="margin-bottom: 18px;">
+                Your data stays tied to your Google identity and is stored only in your CareerOS user space.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1.2, 1.6, 1.2])
     with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Sign in with Google", type="primary", use_container_width=True):
             st.login()
-        st.markdown(
-            "<p style='color:#aaa; font-size:0.75rem; text-align:center; margin-top:12px;'>"
-            "Your data is stored only on this server and never shared.</p>",
-            unsafe_allow_html=True,
-        )
+        st.caption("No account creation flow. Google is used only for sign-in and user isolation.")
     st.stop()
 
 
