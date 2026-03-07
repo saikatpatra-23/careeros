@@ -1058,3 +1058,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 00:50 IST] Admin analytics reliability patch: introduced secure owner-hash fallback in auth layer to prevent owner lockout without exposing analytics to beta users.
 
 [2026-03-08 01:05 IST] UX/privacy patch: Admin Analytics nav item now hidden for non-admin users across multiple Streamlit route patterns.
+
+[2026-03-08 01:30 IST] UI stability patch: Smart Apply page content cleaned from corrupted encoded glyphs causing unreadable headings/messages for users.
