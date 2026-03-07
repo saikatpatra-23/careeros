@@ -189,7 +189,11 @@ def require_login() -> None:
                 st.markdown(
                     """
                     <style>
-                    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="7_Admin_Analytics"] {
+                    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="7_Admin_Analytics"],
+                    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="Admin_Analytics"],
+                    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="admin_analytics"],
+                    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="Admin+Analytics"],
+                    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="admin+analytics"] {
                         display: none !important;
                     }
                     </style>
