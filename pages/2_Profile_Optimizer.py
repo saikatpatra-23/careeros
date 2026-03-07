@@ -61,8 +61,8 @@ def _build_naukri_updater_zip(email: str, profile: dict, prefs: dict, resume_sav
 1. Unzip this folder anywhere on your Windows PC.
 2. Ensure Google Chrome is installed.
 3. Put the included `config.json` next to `update_profile.py`.
-4. Open PowerShell in this folder.
-5. Run:
+4. Double-click `run_updater.bat` (recommended), OR open PowerShell in this folder.
+5. If using PowerShell, run:
    python update_profile.py
 
 What it updates:
@@ -82,6 +82,15 @@ Notes:
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("config.json", json.dumps(config_data, indent=2, ensure_ascii=False))
         zf.writestr("INSTALL.txt", install_txt)
+        zf.writestr(
+            "run_updater.bat",
+            "@echo off\r\n"
+            "cd /d \"%~dp0\"\r\n"
+            "python update_profile.py\r\n"
+            "echo.\r\n"
+            "echo Updater finished. Press any key to close.\r\n"
+            "pause >nul\r\n",
+        )
         for fname in ["update_profile.py", "requirements.txt"]:
             fpath = job_applier_dir / fname
             if fpath.exists():
@@ -372,14 +381,19 @@ with tab_naukri:
         else:
             updater_zip = _build_naukri_updater_zip(email, profile, prefs, resume_saved, naukri_data)
             st.download_button(
-                label="Download Naukri Profile Updater",
+                label="Download Runner (then run locally)",
                 data=updater_zip,
                 file_name="careeros_naukri_profile_updater.zip",
                 mime="application/zip",
                 use_container_width=True,
                 type="primary",
             )
-            st.markdown('<div class="co-tip">Live-verified updater status: headline, summary, skills, preferred locations, and employment descriptions are updating successfully from the downloaded runner.</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="co-tip"><b>Important:</b> Streamlit app direct Naukri profile update nahi karta. '
+                'Ye ZIP local runner download karta hai. ZIP unzip karo aur <code>run_updater.bat</code> run karo '
+                '(ya PowerShell me <code>python update_profile.py</code>). Tabhi profile update hota hai.</div>',
+                unsafe_allow_html=True,
+            )
 
 with tab_linkedin:
     st.markdown('<div class="co-section-kicker">Output</div><div class="co-section-title">LinkedIn profile draft</div>', unsafe_allow_html=True)
