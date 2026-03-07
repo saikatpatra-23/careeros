@@ -8,6 +8,21 @@ from config import _get_secret
 from modules.telemetry.tracker import track_login
 
 
+def _nested_get(container, path: tuple[str, ...]):
+    cur = container
+    for part in path:
+        try:
+            if isinstance(cur, dict):
+                cur = cur.get(part)
+            else:
+                cur = cur[part]
+        except Exception:
+            return None
+        if cur is None:
+            return None
+    return cur
+
+
 def _parse_admin_emails(raw) -> set[str]:
     items: list[str] = []
     if isinstance(raw, str):
@@ -27,12 +42,54 @@ def _parse_admin_emails(raw) -> set[str]:
 
 
 def get_admin_emails() -> set[str]:
-    raw = (
-        _get_secret("INTERNAL_ADMIN_EMAILS", "")
-        or _get_secret("ADMIN_EMAILS", "")
-        or _get_secret("OWNER_EMAIL", "")
-    )
-    return _parse_admin_emails(raw)
+    parsed = set()
+
+    # Primary path: existing helper (env var -> st.secrets top-level)
+    for raw in (
+        _get_secret("INTERNAL_ADMIN_EMAILS", ""),
+        _get_secret("ADMIN_EMAILS", ""),
+        _get_secret("OWNER_EMAIL", ""),
+        _get_secret("internal_admin_emails", ""),
+        _get_secret("admin_emails", ""),
+        _get_secret("owner_email", ""),
+    ):
+        parsed |= _parse_admin_emails(raw)
+
+    # Secondary path: direct st.secrets reads for nested sections.
+    try:
+        secrets_obj = st.secrets
+    except Exception:
+        secrets_obj = None
+
+    if secrets_obj is not None:
+        candidates = []
+        for key in (
+            "INTERNAL_ADMIN_EMAILS",
+            "ADMIN_EMAILS",
+            "OWNER_EMAIL",
+            "internal_admin_emails",
+            "admin_emails",
+            "owner_email",
+        ):
+            value = _nested_get(secrets_obj, (key,))
+            if value is not None:
+                candidates.append(value)
+
+        for path in (
+            ("admin", "emails"),
+            ("admin", "admin_emails"),
+            ("admin", "internal_admin_emails"),
+            ("security", "admin_emails"),
+            ("security", "internal_admin_emails"),
+        ):
+            value = _nested_get(secrets_obj, path)
+            if value is not None:
+                candidates.append(value)
+
+        for raw in candidates:
+            parsed |= _parse_admin_emails(raw)
+
+    return parsed
 
 
 def is_admin_user(email: str) -> bool:

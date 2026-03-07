@@ -24,7 +24,7 @@ if not is_admin_user(email):
     st.caption(
         f"Logged-in email: {email}. "
         f"Configured admin allowlist entries: {len(get_admin_emails())}. "
-        "Add your email to INTERNAL_ADMIN_EMAILS in Streamlit secrets."
+        "Add your email to INTERNAL_ADMIN_EMAILS (or [admin].internal_admin_emails) in Streamlit secrets, then restart/redeploy."
     )
     st.stop()
 

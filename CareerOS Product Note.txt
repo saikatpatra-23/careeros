@@ -1050,3 +1050,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-07 23:48 IST] Added admin-only nav visibility for telemetry page; beta users no longer see Admin Analytics entry in sidebar.
 
 [2026-03-08 00:05 IST] Admin access reliability fix: standardized admin-email parsing and centralised is_admin_user() checks for analytics/auth visibility controls.
+
+[2026-03-08 00:20 IST] Admin Analytics access check now supports varied secrets structures for admin allowlist, reducing false unauthorized errors in Streamlit Cloud.
