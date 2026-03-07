@@ -398,6 +398,19 @@ with tab_naukri:
             )
             st.markdown("**Requirements:** Windows + Chrome + Python installed")
             st.code("python --version", language="bash")
+            with st.expander("Troubleshooting (Beta Users)"):
+                st.markdown(
+                    "1. **`python` command not found**\n"
+                    "Install Python 3.11+ and re-open terminal, then run `python --version`.\n\n"
+                    "2. **Naukri login fails**\n"
+                    "Check credentials in Setup page, then download a fresh runner ZIP and retry.\n\n"
+                    "3. **Updater opens browser but fields are not saved**\n"
+                    "Naukri UI may have changed; share the latest log + screenshot from runner logs.\n\n"
+                    "4. **Where are logs?**\n"
+                    "Inside the extracted updater folder, open `logs/` and share latest `.log`, `.png`, `.html` files.\n\n"
+                    "5. **Still stuck?**\n"
+                    "Re-download updater from app after regenerating profile draft, then run again."
+                )
             st.markdown(
                 '<div class="co-tip"><b>Important:</b> Streamlit app direct Naukri profile update nahi karta. '
                 'Ye ZIP local runner download karta hai. ZIP unzip karo aur <code>run_updater.bat</code> run karo '
