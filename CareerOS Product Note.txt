@@ -1038,3 +1038,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-07 22:20 IST] Patch: fixed production Streamlit crash caused by invalid st.page_link icon value ('??'). Updated dashboard/profile links to valid icon-safe usage and moved global CSS to black/dark high-contrast visual system for readability.
 
 [2026-03-07 22:45 IST] UX clarification: Profile Optimizer updater button now labeled as local runner download. Added run_updater.bat in installer package for one-click local execution.
+
+[2026-03-07 23:00 IST] UX update for beta onboarding: updater area now includes 5-step simple guide and prerequisites to run local Naukri updater agent.

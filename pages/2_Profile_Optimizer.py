@@ -388,6 +388,16 @@ with tab_naukri:
                 use_container_width=True,
                 type="primary",
             )
+            st.markdown("#### Beta User Steps (Easy)")
+            st.markdown(
+                "1. Click **Download Runner (then run locally)**\n"
+                "2. Extract the ZIP on your Windows laptop\n"
+                "3. Double-click `run_updater.bat`\n"
+                "4. Wait while browser updates your Naukri profile\n"
+                "5. Check terminal/log files if any step fails"
+            )
+            st.markdown("**Requirements:** Windows + Chrome + Python installed")
+            st.code("python --version", language="bash")
             st.markdown(
                 '<div class="co-tip"><b>Important:</b> Streamlit app direct Naukri profile update nahi karta. '
                 'Ye ZIP local runner download karta hai. ZIP unzip karo aur <code>run_updater.bat</code> run karo '
