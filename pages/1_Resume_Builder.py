@@ -4,6 +4,7 @@ Page 1 — Resume Builder
 Deep probing chat → Role suggestion → ATS Word resume download.
 """
 import os, sys
+import html
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
@@ -134,6 +135,48 @@ st.markdown("""
     line-height: 1.4;
     font-weight: 600;
 }
+
+.rb-msg-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin: 10px 0;
+}
+.rb-msg-row-user {
+    justify-content: flex-end;
+}
+.rb-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: #1d2a47;
+    border: 1px solid #2b3b61;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+.rb-avatar-user {
+    background: #2a3347;
+    border-color: #394760;
+}
+.rb-msg {
+    max-width: 74%;
+    border-radius: 14px;
+    padding: 11px 14px;
+    line-height: 1.6;
+    font-size: 1rem;
+}
+.rb-msg-ai {
+    background: #2a313f;
+    border: 1px solid #3a4358;
+    color: #eaf0ff;
+}
+.rb-msg-user {
+    background: #3c6df0;
+    color: #f8fbff;
+    font-weight: 600;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -209,6 +252,20 @@ def _start_new_session(existing_profile):
     st.session_state.rb_step     = 2
     store.save_draft_state(step=2, exchange_count=0)
     st.rerun()
+
+
+def _render_chat_bubble(role: str, text: str):
+    safe = html.escape(text or "").replace("\n", "<br>")
+    if role == "assistant":
+        st.markdown(
+            f'<div class="rb-msg-row"><div class="rb-avatar">🤖</div><div class="rb-msg rb-msg-ai">{safe}</div></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="rb-msg-row rb-msg-row-user"><div class="rb-msg rb-msg-user">{safe}</div><div class="rb-avatar rb-avatar-user">🧑</div></div>',
+            unsafe_allow_html=True,
+        )
 
 
 # =============================================================================
@@ -460,14 +517,9 @@ if st.session_state.rb_step == 2:
 
     st.divider()
 
-    # ── Chat history using st.chat_message ────────────────────────────────────
+    # ── Chat history bubble rendering ─────────────────────────────────────────
     for role, text in st.session_state.rb_chat:
-        if role == "assistant":
-            with st.chat_message("assistant", avatar="🤖"):
-                st.markdown(text)
-        else:
-            with st.chat_message("user", avatar="🧑"):
-                st.markdown(text)
+        _render_chat_bubble(role, text)
 
     # ── Chat input ────────────────────────────────────────────────────────────
     user_input = st.chat_input(
@@ -477,19 +529,17 @@ if st.session_state.rb_step == 2:
 
     if user_input and user_input.strip():
         # Show user message immediately
-        with st.chat_message("user", avatar="🧑"):
-            st.markdown(user_input.strip())
+        _render_chat_bubble("user", user_input.strip())
 
         # Get AI response
-        with st.chat_message("assistant", avatar="🤖"):
-            with st.spinner("CareerOS is thinking..."):
-                try:
-                    reply = session.send(user_input.strip())
-                except Exception as e:
-                    log_error(email=email, page="Resume Builder", exc=e, handled=True)
-                    st.error(f"API error: {e}")
-                    st.stop()
-            st.markdown(reply)
+        with st.spinner("CareerOS is thinking..."):
+            try:
+                reply = session.send(user_input.strip())
+            except Exception as e:
+                log_error(email=email, page="Resume Builder", exc=e, handled=True)
+                st.error(f"API error: {e}")
+                st.stop()
+        _render_chat_bubble("assistant", reply)
 
         st.session_state.rb_chat.append(("user", user_input.strip()))
         st.session_state.rb_chat.append(("assistant", reply))
