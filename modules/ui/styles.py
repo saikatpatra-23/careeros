@@ -6,35 +6,35 @@ import streamlit as st
 
 GLOBAL_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-    --bg: #090b12;
-    --bg-2: #0d111b;
-    --surface: #161b27;
-    --surface-2: #1b2130;
-    --line: #2b3345;
-    --text: #f1f5ff;
-    --muted: #9aa8c3;
-    --blue: #3c6df0;
-    --blue-2: #2a57d9;
+    --bg: #121420;
+    --bg-2: #151826;
+    --surface: #1b1f2f;
+    --surface-2: #1f2434;
+    --line: #2b3040;
+    --text: #edf1fb;
+    --muted: #8f9ab0;
+    --blue: #3d63f5;
+    --blue-2: #3156d4;
     --good: #22c55e;
     --warn: #f59e0b;
     --bad: #ef4444;
-    --radius-xl: 22px;
-    --radius-lg: 16px;
-    --radius-md: 12px;
-    --shadow: 0 18px 35px rgba(0,0,0,0.35);
+    --radius-xl: 18px;
+    --radius-lg: 12px;
+    --radius-md: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25);
 }
 
 html, body, [class*="css"] {
-    font-family: 'Manrope', sans-serif !important;
+    font-family: 'Inter', system-ui, sans-serif !important;
     color: var(--text);
 }
 body, .stApp {
     background:
-        radial-gradient(circle at 86% 12%, rgba(60,109,240,0.22), transparent 26%),
-        linear-gradient(180deg, #06080f 0%, #090d17 100%);
+        radial-gradient(circle at 86% 12%, rgba(61,99,245,0.16), transparent 26%),
+        linear-gradient(180deg, #0d1018 0%, #0c0f17 100%);
 }
 #MainMenu, footer { visibility: hidden; }
 
@@ -45,10 +45,10 @@ body, .stApp {
 }
 
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a0d14 0%, #0d111b 100%) !important;
-    border-right: 1px solid #1f2636 !important;
+    background: linear-gradient(180deg, #0d1018 0%, #0b0e15 100%) !important;
+    border-right: 1px solid #232938 !important;
 }
-section[data-testid="stSidebar"] * { color: #d9e2f3 !important; }
+section[data-testid="stSidebar"] * { color: #cfd8ed !important; }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
     margin-bottom: 6px;
     border-radius: 16px;
@@ -57,13 +57,13 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
     border: 1px solid transparent;
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
-    background: #151c2b !important;
-    border-color: #243049;
+    background: #181d2a !important;
+    border-color: #2a3248;
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {
-    background: #102043 !important;
-    border-color: #1f3f8f;
-    color: #dbe7ff !important;
+    background: #141f3e !important;
+    border-color: #294bbb;
+    color: #e3ebff !important;
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="api_ingest"] {
     display: none !important;
@@ -134,7 +134,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="api_inges
 .co-card {
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    background: linear-gradient(180deg, #171d2b 0%, #141a27 100%);
+    background: linear-gradient(145deg, #1b1f2f 0%, #161a28 100%);
     padding: 22px 24px;
     box-shadow: var(--shadow);
 }
@@ -316,7 +316,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="api_inges
     font-weight: 700 !important;
 }
 [data-testid="baseButton-secondary"] {
-    background: #131a28 !important;
+    background: #171b29 !important;
     border: 1px solid var(--line) !important;
     color: #dbe5fb !important;
     border-radius: 12px !important;

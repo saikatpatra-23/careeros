@@ -1070,3 +1070,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 03:45 IST] UI system pass for remaining screens: ATS Checker, Cover Letter, Smart Apply, and Resume Builder now use unified dark premium card style aligned to reference direction. Added dedicated Run History page for timeline-style visibility of runs, applied/skipped jobs, and recruiter invite events.
 
 [2026-03-08 04:05 IST] Resume Builder UX adjustment: intro section now renders as compact chat-style entry instead of explanatory text-heavy blocks. Primary CTA is chat start/continue; optional upload path remains available.
+
+[2026-03-08 04:20 IST] Shared UI theme update for Loveable alignment: adopted Inter typography and Loveable-like dark token palette (background/card/border/primary/radius/shadow) in global styles so all pages inherit closer visual parity.
