@@ -173,9 +173,10 @@ st.markdown("""
     color: #eaf0ff;
 }
 .rb-msg-user {
-    background: #3c6df0;
-    color: #f8fbff;
-    font-weight: 600;
+    background: #2a313f;
+    border: 1px solid #3a4358;
+    color: #eaf0ff;
+    font-weight: 500;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -554,7 +555,7 @@ if st.session_state.rb_step == 2:
     gen_col, restart_col = st.columns([3, 1])
     with gen_col:
         if can_gen:
-            if st.button("✨ Generate My Resume Now", type="primary", use_container_width=True):
+            if st.button("Generate My Resume", type="primary", use_container_width=True):
                 with st.spinner("CareerOS is building your resume... (30-60 seconds)"):
                     try:
                         resume_data = session.generate_resume()
@@ -575,10 +576,8 @@ if st.session_state.rb_step == 2:
                 st.session_state.rb_step   = 3
                 st.rerun()
         else:
-            st.button(
-                f"✨ Generate My Resume (share {MIN_PROBE_ROUNDS - exchanges} more exchange{'s' if MIN_PROBE_ROUNDS - exchanges != 1 else ''})",
-                disabled=True,
-                use_container_width=True,
+            st.caption(
+                f"Share {MIN_PROBE_ROUNDS - exchanges} more exchange{'s' if MIN_PROBE_ROUNDS - exchanges != 1 else ''} to unlock generation."
             )
 
     with restart_col:
