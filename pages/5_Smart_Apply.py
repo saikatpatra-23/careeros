@@ -278,20 +278,18 @@ with tab_setup:
 
     st.markdown("""
     <div class="warning-box">
-         <strong>Why does it run on your PC, not in the cloud?</strong><br>
-        Naukri actively blocks cloud server IPs (AWS, GCP, Azure) as bots.
-        Your home/office IP is trusted. The local runner uses your residential IP to browse
-        Naukri exactly like you would, with a real browser.
+         <strong>Why local runner?</strong><br>
+        Naukri blocks many cloud IPs. Local runner uses your normal device/IP for reliable execution.
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     steps = [
-        ("Download the installer package", "One ZIP has everything inside. Click the button below."),
-        ("Unzip to any folder", "e.g. <code>C:\\CareerOS\\</code>. Keep the folder intact."),
-        ("Run the installer once", "Right-click PowerShell, choose <strong>Run as Administrator</strong>, navigate to the folder, then run <code>.\\install_service.ps1</code>."),
-        ("Done - it runs forever", "CareerOS Watcher starts on every boot, runs at <strong>9:30 AM</strong> and <strong>2 PM</strong> daily. Results appear in Run History automatically."),
+        ("Download package", "Single ZIP with config and scripts."),
+        ("Unzip folder", "Example: <code>C:\\CareerOS\\</code>."),
+        ("Install once", "Run <code>.\\install_service.ps1</code> in Admin PowerShell."),
+        ("Auto-run", "Runs at <strong>9:30 AM</strong> and <strong>2 PM</strong> daily."),
     ]
 
     for i, (title, body) in enumerate(steps, 1):
@@ -305,7 +303,7 @@ with tab_setup:
 
     st.divider()
     st.markdown("### Download Installer Package")
-    st.caption("Everything pre-configured for you. Just unzip, run the installer as Admin, and you're live.")
+    st.caption("Pre-configured package. Unzip and run installer as Admin.")
 
     prefs        = store.load_apply_prefs()
     config_data = {
@@ -515,31 +513,24 @@ with tab_history:
 # =============================================================================
 with tab_inbox:
     st.markdown('<div class="co-section-kicker">Invites</div><div class="co-section-title">Recruiter Inbox</div>', unsafe_allow_html=True)
-    st.caption(
-        "HR invites detected by CareerOS from Gmail monitor (real-time) "
-        "and from Naukri inbox check (on every scheduled run)."
-    )
+    st.caption("Shows HR invites from Gmail monitor and scheduled Naukri checks.")
 
     st.markdown("""
     <div class="warning-box">
-         <strong>Why this tab matters:</strong> An HR invite has 10x higher callback rate than
-        a cold application. CareerOS detects these automatically and applies on your behalf
-        within minutes, before the HR moves on.
+         <strong>Why this matters:</strong> HR invites convert better than cold applies. This tab helps you respond fast.
     </div>
     """, unsafe_allow_html=True)
 
     # Gmail Monitor setup card
     with st.expander("Set Up Gmail Monitor (one-time, 2 minutes)", expanded=False):
         st.markdown("""
-        The Gmail Monitor runs 24/7 on **Google's own servers**; no laptop needed.
-        It detects Naukri HR invites and profile views the moment they hit your inbox.
+        Runs 24/7 on Google Apps Script, no laptop needed.
 
         **Steps:**
-        1. Open [script.google.com](https://script.google.com) in your browser
-        2. Click **New project** and paste the script from the Setup tab below
-        3. Set your `MAKE_WEBHOOK_URL` at the top of the script (from your config file)
-        4. Click **Run setupTrigger()** and authorize when prompted
-        5. Done. It runs every 5 minutes forever.
+        1. Open [script.google.com](https://script.google.com)
+        2. Create project and paste `gmail_monitor.gs`
+        3. Set `MAKE_WEBHOOK_URL`
+        4. Run `setupTrigger()` once
         """)
         st.code(
             "// Find this file in your careeros download:\n"

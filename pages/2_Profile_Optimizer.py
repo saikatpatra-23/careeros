@@ -117,8 +117,7 @@ def _render_resume_state(resume_data: dict):
             <span class="co-hero-badge">Profile Engine</span>
             <div class="co-hero-title">Turn your resume into a recruiter-ready Naukri profile</div>
             <div class="co-hero-copy">
-                Upload a resume or use your CareerOS resume, answer a few high-signal questions, then let CareerOS create the headline,
-                summary, skills, and experience copy that your updater can push into Naukri.
+                Answer a few missing-signal questions. CareerOS then generates headline, summary, skills, and experience copy ready for Naukri.
             </div>
             <div class="co-inline-stats">
                 {''.join(f'<span class="co-pill">{item}</span>' for item in stats)}
@@ -198,7 +197,7 @@ if not resume_data:
         <div class="co-hero">
             <span class="co-hero-badge">Start Here</span>
             <div class="co-hero-title">No CareerOS resume yet</div>
-            <div class="co-hero-copy">You can still start from your existing PDF, DOCX, or image resume. CareerOS will parse it, structure it, and use that as the source for profile generation.</div>
+            <div class="co-hero-copy">Upload any resume (PDF/DOCX/Image). We will parse and use it for profile generation.</div>
         </div>
         """,
         unsafe_allow_html=True,

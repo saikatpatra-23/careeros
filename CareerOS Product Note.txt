@@ -1074,3 +1074,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 04:20 IST] Shared UI theme update for Loveable alignment: adopted Inter typography and Loveable-like dark token palette (background/card/border/primary/radius/shadow) in global styles so all pages inherit closer visual parity.
 
 [2026-03-08 04:35 IST] Resume Builder interaction refinement: unified chat bubble tone for both assistant and user, and removed oversized disabled generate CTA from pre-ready state to keep chat area cleaner.
+
+[2026-03-08 04:55 IST] Page copy tightening update: Smart Apply setup/inbox guidance, Cover Letter tips, and Profile Optimizer hero messages were rewritten to short actionable text to reduce narrative-heavy screens.

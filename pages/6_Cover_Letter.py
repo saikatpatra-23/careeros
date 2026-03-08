@@ -96,8 +96,7 @@ tab_gen, tab_history = st.tabs(["Generate Letter", "Saved Letters"])
 with tab_gen:
     st.markdown("""
     <div class="tip-row">
-        💡 <strong>Pro tip:</strong> Paste the JD for maximum tailoring. Leave blank for a general letter targeting your saved role.
-        Send the letter in the email body — not as an attachment. Most Indian recruiters don't open attachments from unknown candidates.
+        <strong>Tip:</strong> Paste JD for best tailoring. Send letter in email body, not attachment.
     </div>
     """, unsafe_allow_html=True)
 
@@ -147,12 +146,10 @@ with tab_gen:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
         <div style="background:rgba(59,130,246,0.12);border-radius:10px;padding:14px 16px;font-size:0.825rem;color:#bfdbfe;">
-            <strong>What makes a great Indian cover letter:</strong><br><br>
-            ✓ Opens with an insight or hook — not "I am writing to..."<br>
-            ✓ 2-3 quantified achievements relevant to the JD<br>
-            ✓ Names the company specifically — shows you're not spray-and-pray<br>
-            ✓ 250-350 words — short enough to be read, long enough to matter<br>
-            ✓ Ends with a specific ask (not "hope to hear from you")
+            <strong>Quick checklist:</strong><br><br>
+            ✓ Company-specific opening<br>
+            ✓ 2-3 quantified achievements<br>
+            ✓ Keep it crisp (around 250-350 words)
         </div>
         """, unsafe_allow_html=True)
 
