@@ -192,15 +192,13 @@ if st.session_state.rb_step == 1:
     with col_info:
         st.markdown("### How it works")
         st.markdown("""
-CareerOS will have a **real conversation** with you — in Hindi or English, whichever feels natural.
+Quick 3-step flow:
 
-It will ask about your work, your achievements, and what makes you good at what you do. Then it will:
+1. Share your role, work history, and achievements in chat
+2. CareerOS rewrites it into ATS-friendly resume content
+3. Download ready-to-use Word and PDF resumes
 
-1. **Suggest the best role** for you based on your actual signals (not just what you say you want)
-2. **Reposition your experience** into strong, ATS-optimised language
-3. **Generate a Word resume** ready to upload to Naukri, LinkedIn, and email
-
-**Roughly 10-15 minutes → professional resume ready.**
+**Time needed: ~10 minutes.**
         """)
 
         if has_draft:
@@ -274,12 +272,10 @@ It will ask about your work, your achievements, and what makes you good at what 
 
     with col_how:
         st.markdown("### What makes CareerOS different")
-        st.markdown("**Knows how Naukri works** — RChilli ATS, search ranking, keyword density")
-        st.markdown("**Knows how recruiters think** — 6-second scan, what triggers a call")
-        st.markdown("**Bilingual** — Hindi ya English, dono chalega")
-        st.markdown("**Repositions your story** — operational language → leadership language automatically")
-        st.markdown("**Honest** — if you want role X but fit role Y, we'll tell you + give you a bridge path")
-        st.markdown("**India-specific salary bands** — know your market worth")
+        st.markdown("• Naukri + ATS focused output")
+        st.markdown("• Recruiter-friendly wording")
+        st.markdown("• Hindi/English chat support")
+        st.markdown("• Role-fit and market-aware suggestions")
 
     # ── Resume Vault — full width below both columns ───────────────────────────
     if has_vault:

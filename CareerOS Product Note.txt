@@ -1064,3 +1064,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 02:05 IST] Design system update: implemented premium dark command-center visual language and migrated Dashboard/Setup to card-first SaaS layout aligned with reference screenshots.
 
 [2026-03-08 02:25 IST] UI migration now grounded to provided reference codebase (career-command-center). Dashboard and Setup are refactored to the same command-center visual style.
+
+[2026-03-08 03:05 IST] Resume Builder content cleanup: shortened landing copy to a compact 3-step explanation and reduced differentiation section to brief bullets to avoid text-heavy screen.
