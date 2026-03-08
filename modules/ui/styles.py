@@ -54,7 +54,11 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
     border-radius: 16px;
     padding-top: 8px !important;
     padding-bottom: 8px !important;
+    padding-left: 12px !important;
     border: 1px solid transparent;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
     background: #181d2a !important;
@@ -67,6 +71,43 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="pa
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="api_ingest"] {
     display: none !important;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a::before {
+    width: 18px;
+    text-align: center;
+    opacity: 0.95;
+    font-size: 0.95rem;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href$="app"]::before,
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="/app"]::before {
+    content: "⌂";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="0_Setup"]::before {
+    content: "⚙";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="1_Resume_Builder"]::before {
+    content: "◫";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="2_Profile_Optimizer"]::before {
+    content: "◉";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="3_Role_Clarity"]::before {
+    content: "✦";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="4_ATS_Checker"]::before {
+    content: "◎";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="5_Smart_Apply"]::before {
+    content: "➤";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="6_Cover_Letter"]::before {
+    content: "✉";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="7_Admin_Analytics"]::before {
+    content: "⚑";
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="8_Run_History"]::before {
+    content: "◷";
 }
 
 .co-topbar {
