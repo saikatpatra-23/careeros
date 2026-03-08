@@ -1060,3 +1060,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 01:05 IST] UX/privacy patch: Admin Analytics nav item now hidden for non-admin users across multiple Streamlit route patterns.
 
 [2026-03-08 01:30 IST] UI stability patch: Smart Apply page content cleaned from corrupted encoded glyphs causing unreadable headings/messages for users.
+
+[2026-03-08 02:05 IST] Design system update: implemented premium dark command-center visual language and migrated Dashboard/Setup to card-first SaaS layout aligned with reference screenshots.

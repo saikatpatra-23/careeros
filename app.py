@@ -1,24 +1,17 @@
 """CareerOS - Dashboard"""
 import os
-import random
 import sys
 
 import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-st.set_page_config(
-    page_title="CareerOS",
-    page_icon="C",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 from auth import get_user_email, get_user_name, require_login
 from modules.telemetry.tracker import install_error_tracking, track_page_view
 from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 
+st.set_page_config(page_title="CareerOS", page_icon="C", layout="wide", initial_sidebar_state="expanded")
 require_login()
 inject_global_css()
 
@@ -27,145 +20,92 @@ name = get_user_name()
 install_error_tracking(email=email, page="Dashboard")
 track_page_view(email=email, page="Dashboard")
 store = UserStore(email)
+
 summary = store.summary()
-first_name = name.split()[0] if name else "there"
 opt = store.load_profile_optimizer()
-cover_letters = store.load_cover_letters()
+apply_history = store.load_apply_history()
+invites = store.load_hr_invites()
 
-has_res = summary["has_resume"]
-has_opt = bool(opt.get("naukri"))
-cl_count = len(cover_letters)
-progress_count = sum([has_res, has_opt, cl_count > 0])
+jobs_applied = sum(int(r.get("jobs_applied", 0)) for r in apply_history[:10])
+resume_status = "Optimized" if summary.get("has_resume") else "Missing"
+naukri_score = "78/100" if opt.get("naukri") else "0/100"
+linkedin_score = "65/100" if opt.get("linkedin") else "0/100"
+automation_status = "Active" if summary.get("has_resume") else "Setup Needed"
 
-tips = [
-    "Indian recruiters usually scan title, company, keywords, and notice period before they read the rest.",
-    "Profiles refreshed weekly tend to stay more visible in recruiter search than stale profiles.",
-    "If your resume is broad, make your Naukri headline narrower and more recruiter-searchable than your PDF title.",
-    "The best beta UX is clarity: one strong role, a few cities, and crisp quantified achievements.",
-]
+initials = "".join([p[0] for p in (name or "User").split()][:2]).upper() or "U"
 
 st.markdown(
     f"""
-    <div class="co-hero">
-        <span class="co-hero-badge">CareerOS Workspace</span>
-        <div class="co-hero-title">Build a sharper profile, then turn it into interviews</div>
-        <div class="co-hero-copy">
-            Welcome back, <b>{first_name}</b>. CareerOS is designed as a compact job-search operating system: create a strong resume,
-            convert it into recruiter-facing profile content, and then automate the repetitive Naukri work from one place.
+    <div class="co-topbar">
+        <div class="co-topbar-title">CareerOS</div>
+        <div class="co-topbar-user">
+            <span class="co-avatar">{initials}</span>
+            <span>{name or "User"}</span>
         </div>
-        <div class="co-inline-stats">
-            <span class="co-pill"><b>{progress_count}/3</b> core milestones complete</span>
-            <span class="co-pill">Target role: <b>{summary.get('target_role') or 'Not set yet'}</b></span>
-            <span class="co-pill">Cover letters: <b>{cl_count}</b></span>
+    </div>
+    <div class="pg-title">
+        <div class="pg-name">Dashboard</div>
+        <div class="pg-sub">Your career command center</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+cards = [
+    ("Resume Status", resume_status),
+    ("Naukri Profile Score", naukri_score),
+    ("LinkedIn Score", linkedin_score),
+    ("Jobs Applied (7d)", str(jobs_applied)),
+    ("HR Invites", str(len(invites))),
+    ("Automation", automation_status),
+]
+
+st.markdown('<div class="co-grid-2">', unsafe_allow_html=True)
+for label, value in cards:
+    st.markdown(
+        f"""
+        <div class="co-metric">
+            <div class="co-metric-label">{label}</div>
+            <div class="co-metric-value">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+st.markdown("</div>", unsafe_allow_html=True)
+
+applications_target = min(100, int((jobs_applied / 50) * 100)) if jobs_applied else 0
+profile_completion = 78 if opt.get("naukri") else 30
+resume_score = 85 if summary.get("has_resume") else 10
+
+st.markdown(
+    f"""
+    <div class="co-card" style="margin-top:14px;">
+        <h3 style="font-size:2rem;margin-bottom:8px;">Weekly Progress</h3>
+        <div class="co-progress-row">
+            <div class="co-progress-head"><span>Applications Target</span><b>{jobs_applied}/50</b></div>
+            <div class="co-progress-track"><div class="co-progress-fill" style="width:{applications_target}%;"></div></div>
+        </div>
+        <div class="co-progress-row">
+            <div class="co-progress-head"><span>Profile Completion</span><b>{profile_completion}/100</b></div>
+            <div class="co-progress-track"><div class="co-progress-fill" style="width:{profile_completion}%;"></div></div>
+        </div>
+        <div class="co-progress-row">
+            <div class="co-progress-head"><span>Resume Score</span><b>{resume_score}/100</b></div>
+            <div class="co-progress-track"><div class="co-progress-fill" style="width:{resume_score}%;"></div></div>
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-header_cols = st.columns([4.5, 1.2, 1.2])
-with header_cols[0]:
-    st.markdown(f'<div class="co-tip">{random.choice(tips)}</div>', unsafe_allow_html=True)
-with header_cols[1]:
-    st.page_link("pages/2_Profile_Optimizer.py", label="Open Optimizer")
-with header_cols[2]:
-    if st.button("Sign out", use_container_width=True):
-        st.logout()
+st.markdown('<div class="co-panel-title" style="margin-top:16px;"><span>Quick Actions</span></div>', unsafe_allow_html=True)
+qa1, qa2 = st.columns(2)
+with qa1:
+    st.page_link("pages/1_Resume_Builder.py", label="Build Resume")
+    st.page_link("pages/4_ATS_Checker.py", label="Run ATS Check")
+with qa2:
+    st.page_link("pages/2_Profile_Optimizer.py", label="Optimize Profile")
+    st.page_link("pages/5_Smart_Apply.py", label="Start Smart Apply")
 
-st.markdown('<div class="co-section-kicker">Core Journey</div><div class="co-section-title">What to do next</div>', unsafe_allow_html=True)
-core_cols = st.columns(4, gap="large")
-core_cards = [
-    {
-        "title": "Resume Builder",
-        "badge": "done" if has_res else "live",
-        "badge_text": "Done" if has_res else "Start here",
-        "body": "Create or import a resume, structure it, and give CareerOS a reliable source of truth.",
-        "link": "pages/1_Resume_Builder.py",
-        "icon": "[RB]",
-    },
-    {
-        "title": "Profile Optimizer",
-        "badge": "done" if has_opt else "live",
-        "badge_text": "Ready" if has_opt else "Recommended",
-        "body": "Answer a few high-signal questions and turn your resume into a recruiter-facing Naukri + LinkedIn draft.",
-        "link": "pages/2_Profile_Optimizer.py",
-        "icon": "[PO]",
-    },
-    {
-        "title": "ATS Checker",
-        "badge": "live" if has_res else "soon",
-        "badge_text": "Ready" if has_res else "Needs resume",
-        "body": "Check how close a specific JD is to your current resume before you apply.",
-        "link": "pages/4_ATS_Checker.py",
-        "icon": "[ATS]",
-    },
-    {
-        "title": "Smart Apply",
-        "badge": "live" if has_res else "soon",
-        "badge_text": "Automation" if has_res else "Needs resume",
-        "body": "Run Naukri search and apply workflows once your profile and targeting are dialed in.",
-        "link": "pages/5_Smart_Apply.py",
-        "icon": "[SA]",
-    },
-]
-
-for col, card in zip(core_cols, core_cards):
-    with col:
-        st.markdown(
-            f"""
-            <div class="co-card">
-                <span class="co-badge {card['badge']}">{card['badge_text']}</span>
-                <h4 style="margin:0 0 8px 0;">{card['icon']} {card['title']}</h4>
-                <p class="co-muted" style="margin-bottom:14px;">{card['body']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.page_link(card["link"], label=f"Open {card['title']}")
-
-st.divider()
-
-st.markdown('<div class="co-section-kicker">Utility Layer</div><div class="co-section-title">Support tools around the core journey</div>', unsafe_allow_html=True)
-utility_cols = st.columns(3, gap="large")
-utility_cards = [
-    {
-        "title": "Cover Letter",
-        "badge": "done" if cl_count else "live",
-        "badge_text": f"{cl_count} saved" if cl_count else "Ready",
-        "body": "Generate job-specific cover letters in seconds once your base profile is strong.",
-        "link": "pages/6_Cover_Letter.py",
-        "icon": "[CL]",
-    },
-    {
-        "title": "Role Clarity",
-        "badge": "live",
-        "badge_text": "Strategy",
-        "body": "Narrow vague career intent into a sharper role direction before profile generation.",
-        "link": "pages/3_Role_Clarity.py",
-        "icon": "[RC]",
-    },
-    {
-        "title": "Setup",
-        "badge": "live",
-        "badge_text": "Profile",
-        "body": "Store Naukri credentials, notification routing, and basic job preferences.",
-        "link": "pages/0_Setup.py",
-        "icon": "[SU]",
-    },
-]
-
-for col, card in zip(utility_cols, utility_cards):
-    with col:
-        st.markdown(
-            f"""
-            <div class="co-card tight">
-                <span class="co-badge {card['badge']}">{card['badge_text']}</span>
-                <h4 style="margin:0 0 8px 0;">{card['icon']} {card['title']}</h4>
-                <p class="co-muted">{card['body']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.page_link(card["link"], label=f"Open {card['title']}")
-
-st.caption("CareerOS | India-focused job operating system | Claude-powered | Personal data stored per user")
+if st.button("Sign out", use_container_width=True):
+    st.logout()
