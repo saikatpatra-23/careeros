@@ -1066,3 +1066,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 02:25 IST] UI migration now grounded to provided reference codebase (career-command-center). Dashboard and Setup are refactored to the same command-center visual style.
 
 [2026-03-08 03:05 IST] Resume Builder content cleanup: shortened landing copy to a compact 3-step explanation and reduced differentiation section to brief bullets to avoid text-heavy screen.
+
+[2026-03-08 03:45 IST] UI system pass for remaining screens: ATS Checker, Cover Letter, Smart Apply, and Resume Builder now use unified dark premium card style aligned to reference direction. Added dedicated Run History page for timeline-style visibility of runs, applied/skipped jobs, and recruiter invite events.

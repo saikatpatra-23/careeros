@@ -78,7 +78,7 @@ saved_opt = store.load_profile_optimizer()
 st.markdown("""
 <style>
 .how-step {
-    background: #1A1D27; border-radius: 10px;
+    background: #121927; border-radius: 10px;
     padding: 14px 18px; border: 1px solid rgba(255,255,255,0.07); margin: 6px 0;
 }
 .how-step-num {
@@ -88,14 +88,14 @@ st.markdown("""
     font-weight: 700; margin-right: 10px;
 }
 .stat-box {
-    background: #1A1D27; border-radius: 10px;
+    background: #121927; border-radius: 10px;
     padding: 18px; border: 1px solid rgba(255,255,255,0.07); text-align: center;
 }
 .stat-num { font-size: 1.9rem; font-weight: 800; color: #4F8EF7; }
 .stat-lbl { font-size: 0.78rem; color: #6B7280; margin-top: 2px; }
 
 .run-card {
-    background: #1A1D27; border-radius: 10px;
+    background: #121927; border-radius: 10px;
     padding: 12px 16px; border: 1px solid rgba(255,255,255,0.07); margin: 6px 0;
 }
 .applied-pill {
@@ -116,7 +116,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="pg-title"><span class="pg-icon">SA</span><span class="pg-name">Smart Auto-Apply</span><span class="pg-sub">AI scoring + auto-apply at 9:30 AM &amp; 2 PM</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-name">Smart Apply</span><span class="pg-sub">Configure, download runner, and track outcomes</span></div>', unsafe_allow_html=True)
 
 # Resume check
 resume_saved = store.load_resume()
@@ -130,15 +130,15 @@ if not resume_data:
 
 # Tabs
 tab_prefs, tab_setup, tab_history, tab_inbox = st.tabs([
-    "Job Preferences", "Setup & Run", "Run History", "Recruiter Inbox"
+    "Configure", "Download Automation", "Run History", "Recruiter Inbox"
 ])
 
 # =============================================================================
 # TAB 1 - JOB PREFERENCES
 # =============================================================================
 with tab_prefs:
-    st.markdown("### Configure What Jobs to Apply To")
-    st.caption("CareerOS uses these settings every time it runs to find and filter jobs.")
+    st.markdown('<div class="co-section-kicker">Smart Apply</div><div class="co-section-title">Configure What Jobs to Apply To</div>', unsafe_allow_html=True)
+    st.caption("These settings are used by every scheduled run.")
 
     saved_prefs = store.load_apply_prefs()
 
@@ -274,7 +274,7 @@ with tab_prefs:
 # TAB 2 - SETUP & RUN
 # =============================================================================
 with tab_setup:
-    st.markdown("### How Smart Apply Works")
+    st.markdown('<div class="co-section-kicker">Automation</div><div class="co-section-title">Download and Run Automation</div>', unsafe_allow_html=True)
 
     st.markdown("""
     <div class="warning-box">
@@ -395,10 +395,10 @@ RESULTS: Appear in CareerOS web app -> Smart Apply -> Run History
 
     zip_buffer.seek(0)
 
-    st.info("Everything is pre-configured. Just unzip, run `install_service.ps1` as Admin, and CareerOS starts working automatically.")
+    st.markdown('<div class="co-info">Everything is pre-configured. Unzip once, run <code>install_service.ps1</code> as Admin, and Smart Apply starts automatically.</div>', unsafe_allow_html=True)
 
     st.download_button(
-        label="Download CareerOS Installer (ZIP)",
+        label="Download Automation Package",
         data=zip_buffer.getvalue(),
         file_name="careeros_installer.zip",
         mime="application/zip",
@@ -432,7 +432,7 @@ notepad logs\\service.log
 # TAB 3 - RUN HISTORY
 # =============================================================================
 with tab_history:
-    st.markdown("### Application Run History")
+    st.markdown('<div class="co-section-kicker">Runs</div><div class="co-section-title">Application Run History</div>', unsafe_allow_html=True)
     st.caption("Every run your local CareerOS runner completes is logged here.")
 
     history = _load_run_history(email, store)
@@ -440,8 +440,8 @@ with tab_history:
     if not history:
         st.info("No runs yet. Set up the local runner and complete your first run. Results will appear here automatically.")
         st.markdown("""
-        <div style="background:#F8FAFC;border-radius:12px;padding:20px;text-align:center;color:#6B7280;margin-top:16px;">
-            <div style="font-size:2rem;">RUN</div>
+        <div class="co-empty-state" style="margin-top:16px;">
+            <div style="font-size:2rem;">Runs</div>
             <div style="font-size:0.9rem;margin-top:8px;">Waiting for first run...</div>
             <div style="font-size:0.8rem;margin-top:4px;">Go to Setup tab to get started.</div>
         </div>
@@ -514,7 +514,7 @@ with tab_history:
 # TAB 4 - RECRUITER INBOX
 # =============================================================================
 with tab_inbox:
-    st.markdown("### Recruiter Inbox")
+    st.markdown('<div class="co-section-kicker">Invites</div><div class="co-section-title">Recruiter Inbox</div>', unsafe_allow_html=True)
     st.caption(
         "HR invites detected by CareerOS from Gmail monitor (real-time) "
         "and from Naukri inbox check (on every scheduled run)."
@@ -572,9 +572,8 @@ with tab_inbox:
     if not unique_invites:
         st.info("No HR invites detected yet.")
         st.markdown("""
-        <div style="background:#F8FAFC;border-radius:12px;padding:24px;
-                    text-align:center;color:#6B7280;margin-top:16px;">
-            <div style="font-size:2.5rem;">INBOX</div>
+        <div class="co-empty-state" style="margin-top:16px;">
+            <div style="font-size:2.5rem;">Inbox</div>
             <div style="font-size:0.95rem;font-weight:600;margin-top:12px;">Inbox empty</div>
             <div style="font-size:0.85rem;margin-top:6px;">
                 Set up the Gmail Monitor above and keep your Naukri profile active.<br>

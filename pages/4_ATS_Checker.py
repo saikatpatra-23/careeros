@@ -18,7 +18,7 @@ from modules.resume.parser import (
 from modules.ui.styles import inject_global_css
 from config import ANTHROPIC_API_KEY
 
-st.set_page_config(page_title="ATS Checker – CareerOS", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="ATS Checker - CareerOS", page_icon="A", layout="wide")
 require_login()
 inject_global_css()
 
@@ -30,12 +30,15 @@ store = UserStore(email)
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-.score-ring { text-align: center; padding: 18px; border-radius: 14px; margin-bottom: 8px; }
+.score-ring {
+    text-align: center; padding: 18px; border-radius: 14px; margin-bottom: 8px;
+    border: 1px solid #2b3345; background: linear-gradient(180deg, #171d2b 0%, #141a27 100%);
+}
 .score-number { font-size: 3.6rem; font-weight: 800; line-height: 1; }
-.score-label  { font-size: 0.82rem; color: #6B7280; margin-top: 4px; }
+.score-label  { font-size: 0.82rem; color: #9aa8c3; margin-top: 4px; }
 
 .verdict-card {
-    border-radius: 10px; padding: 14px 18px;
+    border-radius: 10px; padding: 14px 18px; border: 1px solid #2b3345;
     font-size: 0.9rem; font-weight: 600;
     margin-bottom: 14px; text-align: center;
 }
@@ -45,14 +48,14 @@ st.markdown("""
 }
 .param-label   { font-size: 0.85rem; font-weight: 600; color: #E2E8F0; width: 110px; flex-shrink: 0; }
 .param-bar-wrap { flex: 1; background: rgba(255,255,255,0.08); border-radius: 100px; height: 6px; }
-.param-comment { font-size: 0.78rem; color: #6B7280; width: 190px; flex-shrink: 0; text-align: right; }
+.param-comment { font-size: 0.78rem; color: #9aa8c3; width: 190px; flex-shrink: 0; text-align: right; }
 
 .keyword-pill {
     display: inline-block; padding: 2px 10px; border-radius: 100px;
     font-size: 0.78rem; margin: 3px; font-weight: 500;
 }
 .rec-card {
-    background: #1A1D27; border-radius: 10px;
+    background: #121927; border-radius: 10px;
     padding: 12px 16px; border: 1px solid rgba(255,255,255,0.07);
     margin: 6px 0; font-size: 0.85rem;
 }
@@ -61,14 +64,14 @@ st.markdown("""
 .rec-low    { border-left: 3px solid #10B981; }
 
 .gap-card {
-    background: rgba(249,115,22,0.08); border-radius: 10px;
+    background: rgba(249,115,22,0.12); border-radius: 10px;
     padding: 12px 16px; border-left: 3px solid #F97316;
-    font-size: 0.875rem; color: #FB923C; margin-top: 10px;
+    font-size: 0.875rem; color: #FDBA74; margin-top: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="pg-title"><span class="pg-icon">🎯</span><span class="pg-name">ATS Checker</span><span class="pg-sub">Paste any JD → match score + what to fix</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-name">ATS Checker</span><span class="pg-sub">Paste any JD and get exact match fixes</span></div>', unsafe_allow_html=True)
 
 # ── Resume check ──────────────────────────────────────────────────────────────
 resume_saved = store.load_resume()
@@ -78,8 +81,8 @@ if "ats_uploaded_resume" not in st.session_state:
     st.session_state.ats_uploaded_resume = None
 
 if not resume_data and not st.session_state.ats_uploaded_resume:
-    st.warning("No resume found. Build your resume first — or upload one below for a one-time check.")
-    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder →", icon="📄")
+    st.warning("No resume found. Build your resume first or upload one below for a one-time check.")
+    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder")
 
     st.markdown("#### Upload your resume for a one-time check")
     st.caption("This won't overwrite your saved resume — it's only used for this session.")
@@ -147,7 +150,7 @@ with col_upload_alt:
 st.divider()
 
 # ── JD Input ─────────────────────────────────────────────────────────────────
-st.markdown("### Paste the Job Description")
+st.markdown('<div class="co-section-kicker">Input</div><div class="co-section-title">Paste the Job Description</div>', unsafe_allow_html=True)
 st.caption("Copy the full JD from Naukri, LinkedIn, or any company website and paste it below.")
 
 jd = st.text_area(
@@ -159,7 +162,7 @@ jd = st.text_area(
 
 col_btn, col_tip = st.columns([1, 3])
 with col_btn:
-    analyse = st.button("Analyse My Resume →", type="primary", use_container_width=True, disabled=not jd.strip())
+    analyse = st.button("Analyze My Resume", type="primary", use_container_width=True, disabled=not jd.strip())
 with col_tip:
     st.markdown("<small style='color:#9CA3AF;'>Takes ~10 seconds • Uses your saved resume</small>", unsafe_allow_html=True)
 
@@ -184,23 +187,23 @@ if analyse and jd.strip():
     headline_suggestion = result.get("resume_headline_suggestion", "")
 
     st.divider()
-    st.markdown("## Your ATS Analysis")
+    st.markdown('<div class="co-section-kicker">Output</div><div class="co-section-title">Your ATS Analysis</div>', unsafe_allow_html=True)
 
     # ── Score + Verdict ───────────────────────────────────────────────────────
     col_score, col_verdict = st.columns([1, 2])
 
     with col_score:
         if score >= 80:
-            color = "#10B981"; bg = "#ECFDF5"
+            color = "#10B981"
         elif score >= 60:
-            color = "#F59E0B"; bg = "#FFFBEB"
+            color = "#F59E0B"
         elif score >= 40:
-            color = "#F97316"; bg = "#FFF7ED"
+            color = "#F97316"
         else:
-            color = "#EF4444"; bg = "#FEF2F2"
+            color = "#EF4444"
 
         st.markdown(f"""
-        <div class="score-ring" style="background:{bg};">
+        <div class="score-ring">
             <div class="score-number" style="color:{color};">{score}</div>
             <div class="score-label">out of 100</div>
         </div>
@@ -208,20 +211,20 @@ if analyse and jd.strip():
 
     with col_verdict:
         if score >= 80:
-            v_bg = "#ECFDF5"; v_color = "#065F46"
+            v_bg = "rgba(16,185,129,0.12)"; v_color = "#6EE7B7"
         elif score >= 60:
-            v_bg = "#FFFBEB"; v_color = "#92400E"
+            v_bg = "rgba(245,158,11,0.12)"; v_color = "#FCD34D"
         elif score >= 40:
-            v_bg = "#FFF7ED"; v_color = "#9A3412"
+            v_bg = "rgba(249,115,22,0.12)"; v_color = "#FDBA74"
         else:
-            v_bg = "#FEF2F2"; v_color = "#991B1B"
+            v_bg = "rgba(239,68,68,0.14)"; v_color = "#FCA5A5"
 
         st.markdown(f"""
         <div class="verdict-card" style="background:{v_bg}; color:{v_color};">
             {verdict}
         </div>
         """, unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#374151;font-size:0.9rem;'>{reason}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#9aa8c3;font-size:0.9rem;'>{reason}</p>", unsafe_allow_html=True)
 
         if gap:
             st.markdown(f"""
@@ -274,11 +277,11 @@ if analyse and jd.strip():
     col_found, col_missing = st.columns(2)
 
     with col_found:
-        st.markdown(f"### ✅ Keywords Found ({len(found)})")
+        st.markdown(f"### Keywords Found ({len(found)})")
         st.caption("These JD keywords are present in your resume — good signals for ATS.")
         if found:
             pills = " ".join([
-                f'<span class="keyword-pill" style="background:#D1FAE5;color:#065F46;">{k}</span>'
+                f'<span class="keyword-pill" style="background:rgba(16,185,129,0.15);color:#86efac;">{k}</span>'
                 for k in found
             ])
             st.markdown(pills, unsafe_allow_html=True)
@@ -286,11 +289,11 @@ if analyse and jd.strip():
             st.markdown("<small style='color:#9CA3AF;'>None detected</small>", unsafe_allow_html=True)
 
     with col_missing:
-        st.markdown(f"### ❌ Keywords Missing ({len(missing)})")
+        st.markdown(f"### Keywords Missing ({len(missing)})")
         st.caption("These JD keywords are absent from your resume — add them to improve your score.")
         if missing:
             pills = " ".join([
-                f'<span class="keyword-pill" style="background:#FEE2E2;color:#991B1B;">{k}</span>'
+                f'<span class="keyword-pill" style="background:rgba(239,68,68,0.16);color:#fca5a5;">{k}</span>'
                 for k in missing
             ])
             st.markdown(pills, unsafe_allow_html=True)
@@ -316,8 +319,8 @@ if analyse and jd.strip():
         where  = rec.get("where", "")
         st.markdown(f"""
         <div class="rec-card {cls}">
-            <span style="font-size:0.75rem;font-weight:700;color:#6B7280;">{label} · {where}</span><br>
-            <span style="color:#1F273A;">{action}</span>
+            <span style="font-size:0.75rem;font-weight:700;color:#9aa8c3;">{label} · {where}</span><br>
+            <span style="color:#e7eefc;">{action}</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -333,23 +336,23 @@ if analyse and jd.strip():
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("""
-        <div style="background:#EFF6FF;border-radius:12px;padding:16px 20px;border-left:4px solid #3B82F6;">
-            <strong style="color:#1E40AF;">Want to tailor your resume for this job?</strong><br>
-            <span style="font-size:0.875rem;color:#374151;">
+        <div style="background:rgba(59,130,246,0.14);border-radius:12px;padding:16px 20px;border-left:4px solid #3B82F6;">
+            <strong style="color:#bfdbfe;">Want to tailor your resume for this job?</strong><br>
+            <span style="font-size:0.875rem;color:#c9d6f4;">
             Go to Resume Builder, share the JD, and CareerOS will reposition your experience for this role.
             </span>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        st.page_link("pages/1_Resume_Builder.py", label="Tailor Resume for This Job →", icon="📄")
+        st.page_link("pages/1_Resume_Builder.py", label="Tailor Resume for This Job")
     with col_b:
         st.markdown("""
-        <div style="background:#F0FDF4;border-radius:12px;padding:16px 20px;border-left:4px solid #10B981;">
-            <strong style="color:#065F46;">Profile optimised for this domain?</strong><br>
-            <span style="font-size:0.875rem;color:#374151;">
+        <div style="background:rgba(16,185,129,0.14);border-radius:12px;padding:16px 20px;border-left:4px solid #10B981;">
+            <strong style="color:#86efac;">Profile optimized for this domain?</strong><br>
+            <span style="font-size:0.875rem;color:#c9d6f4;">
             Make sure your Naukri headline and skills are updated before you apply.
             </span>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        st.page_link("pages/2_Profile_Optimizer.py", label="Check Profile Optimizer →", icon="🔗")
+        st.page_link("pages/2_Profile_Optimizer.py", label="Check Profile Optimizer")

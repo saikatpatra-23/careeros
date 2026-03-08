@@ -14,7 +14,7 @@ from modules.ui.styles import inject_global_css
 from persistence.store import UserStore
 from modules.coverletter.generator import generate_cover_letter
 
-st.set_page_config(page_title="Cover Letter – CareerOS", page_icon="✉️", layout="wide")
+st.set_page_config(page_title="Cover Letter - CareerOS", page_icon="L", layout="wide")
 require_login()
 inject_global_css()
 
@@ -36,7 +36,7 @@ st.markdown("""
 .subject-text  { font-size: 0.9rem; font-weight: 600; color: #6EE7B7; }
 
 .letter-box {
-    background: #1A1D27; border-radius: 10px;
+    background: #121927; border-radius: 10px;
     padding: 22px 26px; border: 1px solid rgba(255,255,255,0.07);
     font-size: 0.875rem; line-height: 1.8; color: #C9D1D9;
     white-space: pre-wrap;
@@ -76,19 +76,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="pg-title"><span class="pg-icon">✉️</span><span class="pg-name">Cover Letter</span><span class="pg-sub">Paste JD → ready in 10 sec</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-name">Cover Letter</span><span class="pg-sub">JD to recruiter-ready draft in seconds</span></div>', unsafe_allow_html=True)
 
 # ── Resume check ──────────────────────────────────────────────────────────────
 resume_saved = store.load_resume()
 resume_data  = resume_saved.get("structured_data", {})
 
 if not resume_data:
-    st.warning("Build your resume first — the cover letter is personalised from your resume data.")
-    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder →", icon="📄")
+    st.warning("Build your resume first. Cover letter drafting uses your saved resume context.")
+    st.page_link("pages/1_Resume_Builder.py", label="Go to Resume Builder")
     st.stop()
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab_gen, tab_history = st.tabs(["✍️ Generate Letter", "📁 Saved Letters"])
+tab_gen, tab_history = st.tabs(["Generate Letter", "Saved Letters"])
 
 # =============================================================================
 # TAB 1 — GENERATE
@@ -128,7 +128,7 @@ with tab_gen:
 
         st.markdown("<br>", unsafe_allow_html=True)
         generate_btn = st.button(
-            "✉️ Generate Cover Letter",
+            "Generate Cover Letter",
             type="primary",
             use_container_width=True,
         )
@@ -136,17 +136,17 @@ with tab_gen:
     with col_right:
         st.markdown("#### Your Resume Context")
         st.markdown(f"""
-        <div style="background:#F8FAFC;border-radius:10px;padding:16px 18px;border:1.5px solid #E5E7EB;">
-            <div style="font-size:0.8rem;color:#6B7280;margin-bottom:4px;">Targeting</div>
-            <div style="font-size:1rem;font-weight:600;color:#1F2937;">{resume_data.get('target_title', 'Not set')}</div>
-            <div style="font-size:0.8rem;color:#6B7280;margin-top:10px;margin-bottom:4px;">Key Skills used</div>
-            <div style="font-size:0.85rem;color:#374151;">{', '.join(resume_data.get('ats_keywords', [])[:8])}</div>
+        <div style="background:#121927;border-radius:10px;padding:16px 18px;border:1px solid #2b3345;">
+            <div style="font-size:0.8rem;color:#9aa8c3;margin-bottom:4px;">Targeting</div>
+            <div style="font-size:1rem;font-weight:600;color:#e7eefc;">{resume_data.get('target_title', 'Not set')}</div>
+            <div style="font-size:0.8rem;color:#9aa8c3;margin-top:10px;margin-bottom:4px;">Key Skills used</div>
+            <div style="font-size:0.85rem;color:#c9d6f4;">{', '.join(resume_data.get('ats_keywords', [])[:8])}</div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
-        <div style="background:#F0F9FF;border-radius:10px;padding:14px 16px;font-size:0.825rem;color:#0C4A6E;">
+        <div style="background:rgba(59,130,246,0.12);border-radius:10px;padding:14px 16px;font-size:0.825rem;color:#bfdbfe;">
             <strong>What makes a great Indian cover letter:</strong><br><br>
             ✓ Opens with an insight or hook — not "I am writing to..."<br>
             ✓ 2-3 quantified achievements relevant to the JD<br>
@@ -205,10 +205,10 @@ with tab_gen:
 
         # Meta
         st.markdown(
-            f'<span class="meta-pill">📝 {word_count} words</span>'
-            f'<span class="meta-pill">🎨 {tone} tone</span>'
-            f'<span class="meta-pill">{"📌 JD-tailored" if jd_input.strip() else "📌 General letter"}</span>',
-            unsafe_allow_html=True,
+                f'<span class="meta-pill">📝 {word_count} words</span>'
+                f'<span class="meta-pill">🎨 {tone} tone</span>'
+                f'<span class="meta-pill">{"JD-tailored" if jd_input.strip() else "General letter"}</span>',
+                unsafe_allow_html=True,
         )
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -245,21 +245,20 @@ with tab_gen:
                 use_container_width=True,
             )
         with c2:
-            if st.button("🔄 Regenerate", use_container_width=True):
+            if st.button("Regenerate", use_container_width=True):
                 st.session_state.pop("last_cover_letter", None)
                 st.rerun()
         with c3:
             st.page_link(
                 "pages/4_ATS_Checker.py",
-                label="Check ATS Score →",
-                icon="🎯",
+                label="Check ATS Score",
                 use_container_width=True,
             )
 
         st.markdown("""
-        <div style="background:#F0FDF4;border-radius:10px;padding:12px 16px;
-                    font-size:0.8rem;color:#065F46;margin-top:12px;">
-            ✅ <strong>Next step:</strong> Paste this letter into the email body when applying.
+        <div style="background:rgba(16,185,129,0.13);border-radius:10px;padding:12px 16px;
+                    font-size:0.8rem;color:#86efac;margin-top:12px;">
+            <strong>Next step:</strong> Paste this letter into the email body when applying.
             Don't attach it as a PDF — most Indian recruiters won't open attachments from unknown candidates.
         </div>
         """, unsafe_allow_html=True)
@@ -277,9 +276,9 @@ with tab_history:
     if not history:
         st.info("No letters generated yet. Use the Generate tab to create your first cover letter.")
         st.markdown("""
-        <div style="background:#F8FAFC;border-radius:12px;padding:24px;
-                    text-align:center;color:#6B7280;margin-top:16px;">
-            <div style="font-size:2rem;">✉️</div>
+        <div style="background:#111827;border-radius:12px;padding:24px;
+                    text-align:center;color:#9aa8c3;margin-top:16px;border:1px dashed #2f3b56;">
+            <div style="font-size:2rem;">Mail</div>
             <div style="font-size:0.9rem;margin-top:8px;">No letters yet</div>
         </div>
         """, unsafe_allow_html=True)

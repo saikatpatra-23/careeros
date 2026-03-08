@@ -187,7 +187,7 @@ store = UserStore(email)
 profile = store.load_profile()
 prefs = store.load_apply_prefs()
 
-st.markdown('<div class="pg-title"><span class="pg-icon">PO</span><span class="pg-name">Profile Optimizer</span><span class="pg-sub">Naukri + LinkedIn content engine</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-name">Profile Optimizer</span><span class="pg-sub">Naukri + LinkedIn content engine</span></div>', unsafe_allow_html=True)
 
 resume_saved = store.load_resume()
 resume_data = resume_saved.get("structured_data", {})

@@ -27,7 +27,7 @@ def _get_api_key() -> str:
     except Exception:
         return os.getenv("ANTHROPIC_API_KEY", "")
 
-st.set_page_config(page_title="Resume Builder – CareerOS", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Resume Builder - CareerOS", page_icon="R", layout="wide")
 require_login()
 inject_global_css()
 
@@ -126,7 +126,7 @@ def _init():
 
 _init()
 
-st.markdown('<div class="pg-title"><span class="pg-icon">📄</span><span class="pg-name">Resume Builder</span><span class="pg-sub">Chat → ATS resume → Word + PDF</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="pg-title"><span class="pg-name">Resume Builder</span><span class="pg-sub">Chat to ATS resume in Word + PDF</span></div>', unsafe_allow_html=True)
 
 
 # ── Milestone bar helper ───────────────────────────────────────────────────────
@@ -190,6 +190,7 @@ if st.session_state.rb_step == 1:
 
     col_info, col_how = st.columns([3, 2])
     with col_info:
+        st.markdown('<div class="co-card">', unsafe_allow_html=True)
         st.markdown("### How it works")
         st.markdown("""
 Quick 3-step flow:
@@ -269,13 +270,16 @@ Quick 3-step flow:
                 except Exception as e:
                     log_error(email=email, page="Resume Builder", exc=e, handled=True)
                     st.error(f"Could not parse resume: {e}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_how:
-        st.markdown("### What makes CareerOS different")
+        st.markdown('<div class="co-card">', unsafe_allow_html=True)
+        st.markdown("### Why this is different")
         st.markdown("• Naukri + ATS focused output")
         st.markdown("• Recruiter-friendly wording")
         st.markdown("• Hindi/English chat support")
         st.markdown("• Role-fit and market-aware suggestions")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Resume Vault — full width below both columns ───────────────────────────
     if has_vault:
