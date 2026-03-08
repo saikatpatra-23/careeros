@@ -1082,3 +1082,7 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 05:30 IST] Navigation UI enhancement: introduced icon-like markers for each sidebar route via global CSS selectors to mimic Loveable-style visual navigation.
 
 [2026-03-08 05:45 IST] Sidebar icon reliability fix: switched from CSS pseudo-element icons to explicit custom sidebar links (`st.sidebar.page_link` with icon param) rendered during auth flow; hid default auto-nav for consistency.
+
+[2026-03-08 06:20 IST] Branding update: introduced dedicated CareerOS SVG logo and integrated it into sidebar nav header; adjusted topbar product label styling to align with new visual identity.
+
+[2026-03-08 06:40 IST] Dashboard UX simplification: replaced dense analytics blocks with a welcome description section and boxed Quick Action cards (direct page links) for faster first-click navigation.
