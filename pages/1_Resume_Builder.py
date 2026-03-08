@@ -97,6 +97,43 @@ st.markdown("""
 /* Chat */
 .stChatMessage { border-radius: 10px !important; }
 .stChatInputContainer { border-radius: 10px !important; }
+
+.rb-chat-shell {
+    border: 1px solid #2b3345;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #161b27 0%, #111726 100%);
+    overflow: hidden;
+}
+.rb-chat-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid #232c3f;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+.rb-chat-body {
+    padding: 16px 18px;
+    display: grid;
+    gap: 12px;
+}
+.rb-row { display: flex; }
+.rb-row.user { justify-content: flex-end; }
+.rb-bubble-ai {
+    max-width: 78%;
+    background: #2a313f;
+    color: #eaf0ff;
+    border-radius: 14px;
+    padding: 12px 14px;
+    line-height: 1.5;
+}
+.rb-bubble-user {
+    max-width: 66%;
+    background: #3c6df0;
+    color: #f8fbff;
+    border-radius: 14px;
+    padding: 11px 14px;
+    line-height: 1.4;
+    font-weight: 600;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -187,6 +224,108 @@ if st.session_state.rb_step == 1:
     has_vault   = bool(vault)
 
     _milestone_bar(0, False)
+
+    st.markdown(
+        """
+        <div class="rb-chat-shell">
+            <div class="rb-chat-head">AI Resume Assistant</div>
+            <div class="rb-chat-body">
+                <div class="rb-row"><div class="rb-bubble-ai">Hi! I will build your ATS resume in chat. What is your current job title?</div></div>
+                <div class="rb-row user"><div class="rb-bubble-user">Senior Product Manager at Flipkart</div></div>
+                <div class="rb-row"><div class="rb-bubble-ai">Great. Share 2-3 key wins with numbers and team impact.</div></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("No long forms. Just answer in chat and generate in ~10 minutes.")
+
+    if has_draft:
+        saved_exchanges = draft_state.get("exchange_count", len(saved_chat) // 2)
+        saved_at = draft_state.get("saved_at", "")
+        saved_label = ""
+        if saved_at:
+            import datetime as _dt
+            try:
+                saved_label = _dt.datetime.fromisoformat(saved_at).strftime("%d %b, %I:%M %p")
+            except Exception:
+                pass
+        st.info(
+            f"In-progress chat found: {saved_exchanges} exchange{'s' if saved_exchanges != 1 else ''}"
+            + (f" (last saved: {saved_label})" if saved_label else "")
+        )
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("Continue Chat", type="primary", use_container_width=True):
+                session = ResumeBuilderSession.restore(_get_api_key(), saved_chat, saved_exchanges)
+                st.session_state.rb_session  = session
+                st.session_state.rb_chat     = [(m["role"], m["content"]) for m in saved_chat]
+                st.session_state.rb_exchange = session.exchange_count
+                st.session_state.rb_step     = 2
+                st.rerun()
+        with col_b:
+            if st.button("Start Fresh", use_container_width=True):
+                store.save("resume_chat.json", [])
+                store.save("resume_draft_state.json", {})
+                _start_new_session(existing)
+    else:
+        if st.button("Start Resume Chat", type="primary", use_container_width=True):
+            _start_new_session(existing)
+
+    st.markdown('<div class="co-card" style="margin-top:12px;">', unsafe_allow_html=True)
+    st.markdown("#### Upload Existing Resume (Optional)")
+    st.caption("Upload and skip directly to generated draft.")
+    uploaded_new = st.file_uploader(
+        "Upload resume",
+        type=["pdf", "docx", "jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="rb_upload_step1_chat",
+    )
+    if uploaded_new is not None:
+        with st.spinner("Parsing your resume... (15-30 seconds)"):
+            try:
+                file_bytes = uploaded_new.read()
+                ext = uploaded_new.name.rsplit(".", 1)[-1].lower()
+                if ext == "docx":
+                    text = extract_text_from_docx(file_bytes)
+                elif ext == "pdf":
+                    text = extract_text_from_pdf(file_bytes)
+                else:
+                    text = extract_text_from_image(file_bytes, _get_api_key())
+                parsed = parse_resume_to_json(text, _get_api_key())
+                store.save_resume({
+                    "version":         1,
+                    "structured_data": parsed,
+                    "target_role":     parsed.get("target_title", ""),
+                    "domain_family":   parsed.get("domain_family", ""),
+                    "ats_keywords":    parsed.get("ats_keywords", []),
+                    "role_suggestion": parsed.get("role_suggestion", {}),
+                })
+                st.session_state.rb_resume = parsed
+                st.session_state.rb_step   = 3
+                st.rerun()
+            except Exception as e:
+                log_error(email=email, page="Resume Builder", exc=e, handled=True)
+                st.error(f"Could not parse resume: {e}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if has_vault:
+        st.divider()
+        st.markdown("#### Resume Vault")
+        st.caption(f"{len(vault)} saved resume{'s' if len(vault) > 1 else ''}.")
+        for i, saved in enumerate(vault):
+            label = saved.get("vault_label", f"Resume {len(vault) - i}")
+            c1, c2 = st.columns([5, 1])
+            with c1:
+                st.markdown(f"**{label}**")
+            with c2:
+                if st.button("Load", key=f"vault_load_chat_{i}", use_container_width=True):
+                    resume_data = saved.get("structured_data", saved)
+                    st.session_state.rb_resume = resume_data
+                    st.session_state.rb_step   = 3
+                    st.rerun()
+
+    st.stop()
 
     col_info, col_how = st.columns([3, 2])
     with col_info:
