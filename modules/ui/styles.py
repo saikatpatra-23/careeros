@@ -110,6 +110,19 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="8_Run_His
     content: "◷";
 }
 
+/* Sidebar icons override with Unicode escapes (prevents encoding issues) */
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href$="app"]::before,
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="/app"]::before { content: "\\2302" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="0_Setup"]::before { content: "\\2699" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="1_Resume_Builder"]::before { content: "\\25EB" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="2_Profile_Optimizer"]::before { content: "\\25C9" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="3_Role_Clarity"]::before { content: "\\2726" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="4_ATS_Checker"]::before { content: "\\25CE" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="5_Smart_Apply"]::before { content: "\\27A4" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="6_Cover_Letter"]::before { content: "\\2709" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="7_Admin_Analytics"]::before { content: "\\2691" !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="8_Run_History"]::before { content: "\\25F7" !important; }
+
 .co-topbar {
     display: flex;
     justify-content: space-between;
