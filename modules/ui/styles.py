@@ -72,6 +72,10 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="pa
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[href*="api_ingest"] {
     display: none !important;
 }
+/* Hide default Streamlit auto-generated nav; custom nav is rendered from auth.py */
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
+    display: none !important;
+}
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a::before {
     width: 18px;
     text-align: center;

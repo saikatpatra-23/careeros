@@ -17,6 +17,23 @@ _FALLBACK_ADMIN_EMAIL_SHA256 = {
 }
 
 
+def _render_custom_sidebar(email: str) -> None:
+    """Render a consistent custom sidebar with real icons."""
+    with st.sidebar:
+        st.markdown("### CareerOS")
+        st.page_link("app.py", label="Dashboard", icon="🏠")
+        st.page_link("pages/0_Setup.py", label="Setup", icon="⚙️")
+        st.page_link("pages/1_Resume_Builder.py", label="Resume Builder", icon="📄")
+        st.page_link("pages/2_Profile_Optimizer.py", label="Profile Optimizer", icon="🧠")
+        st.page_link("pages/3_Role_Clarity.py", label="Role Clarity", icon="💡")
+        st.page_link("pages/4_ATS_Checker.py", label="ATS Checker", icon="🎯")
+        st.page_link("pages/5_Smart_Apply.py", label="Smart Apply", icon="🚀")
+        st.page_link("pages/6_Cover_Letter.py", label="Cover Letter", icon="✉️")
+        st.page_link("pages/8_Run_History.py", label="Run History", icon="🕘")
+        if is_admin_user(email):
+            st.page_link("pages/7_Admin_Analytics.py", label="Admin Analytics", icon="📊")
+
+
 def _nested_get(container, path: tuple[str, ...]):
     cur = container
     for part in path:
@@ -183,9 +200,10 @@ def require_login() -> None:
             track_login(getattr(st.user, "email", ""), getattr(st.user, "name", ""))
         except Exception:
             pass
+        current_email = getattr(st.user, "email", "").strip().lower()
+        _render_custom_sidebar(current_email)
         try:
-            email = getattr(st.user, "email", "").strip().lower()
-            if not is_admin_user(email):
+            if not is_admin_user(current_email):
                 st.markdown(
                     """
                     <style>

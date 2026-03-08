@@ -1078,3 +1078,7 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 04:55 IST] Page copy tightening update: Smart Apply setup/inbox guidance, Cover Letter tips, and Profile Optimizer hero messages were rewritten to short actionable text to reduce narrative-heavy screens.
 
 [2026-03-08 05:15 IST] Final parity pass on requested remaining pages: app.py, Setup, Role Clarity, and ATS Checker now use concise microcopy and consistent dark Loveable-style surfaces/typography. Role Clarity result/CTA colors fixed for dark-mode readability.
+
+[2026-03-08 05:30 IST] Navigation UI enhancement: introduced icon-like markers for each sidebar route via global CSS selectors to mimic Loveable-style visual navigation.
+
+[2026-03-08 05:45 IST] Sidebar icon reliability fix: switched from CSS pseudo-element icons to explicit custom sidebar links (`st.sidebar.page_link` with icon param) rendered during auth flow; hid default auto-nav for consistency.
