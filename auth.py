@@ -8,6 +8,7 @@ from config import _get_secret
 from modules.telemetry.tracker import track_login
 import os
 import hashlib
+from pathlib import Path
 
 
 # Emergency owner fallback: protects admin access even if Streamlit secrets are unreadable.
@@ -19,8 +20,13 @@ _FALLBACK_ADMIN_EMAIL_SHA256 = {
 
 def _render_custom_sidebar(email: str) -> None:
     """Render a consistent custom sidebar with real icons."""
+    logo_path = Path(__file__).resolve().parent / "assets" / "careeros-logo.svg"
     with st.sidebar:
-        st.markdown("### CareerOS")
+        if logo_path.exists():
+            st.image(str(logo_path), width=170)
+        else:
+            st.markdown("### CareerOS")
+        st.markdown("---")
         st.page_link("app.py", label="Dashboard", icon="🏠")
         st.page_link("pages/0_Setup.py", label="Setup", icon="⚙️")
         st.page_link("pages/1_Resume_Builder.py", label="Resume Builder", icon="📄")

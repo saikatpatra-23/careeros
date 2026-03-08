@@ -37,7 +37,7 @@ initials = "".join([p[0] for p in (name or "User").split()][:2]).upper() or "U"
 st.markdown(
     f"""
     <div class="co-topbar">
-        <div class="co-topbar-title">CareerOS</div>
+        <div class="co-topbar-title">⚡ CareerOS</div>
         <div class="co-topbar-user">
             <span class="co-avatar">{initials}</span>
             <span>{name or "User"}</span>
