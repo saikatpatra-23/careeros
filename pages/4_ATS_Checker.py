@@ -151,7 +151,7 @@ st.divider()
 
 # ── JD Input ─────────────────────────────────────────────────────────────────
 st.markdown('<div class="co-section-kicker">Input</div><div class="co-section-title">Paste the Job Description</div>', unsafe_allow_html=True)
-st.caption("Copy the full JD from Naukri, LinkedIn, or any company website and paste it below.")
+st.caption("Paste full JD for accurate matching.")
 
 jd = st.text_area(
     label="Job Description",
@@ -164,7 +164,7 @@ col_btn, col_tip = st.columns([1, 3])
 with col_btn:
     analyse = st.button("Analyze My Resume", type="primary", use_container_width=True, disabled=not jd.strip())
 with col_tip:
-    st.markdown("<small style='color:#9CA3AF;'>Takes ~10 seconds • Uses your saved resume</small>", unsafe_allow_html=True)
+    st.markdown("<small style='color:#9CA3AF;'>~10 seconds • Uses saved resume</small>", unsafe_allow_html=True)
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
 if analyse and jd.strip():
@@ -237,7 +237,7 @@ if analyse and jd.strip():
 
     # ── Naukri 6 Parameters ───────────────────────────────────────────────────
     st.markdown("### Naukri AI Relevance Score Breakdown")
-    st.caption("These are the 6 parameters Naukri scores every applicant on — recruiters see High / Medium / Low Match.")
+    st.caption("6 key factors used in matching.")
 
     param_labels = {
         "skills":      "Skills",
@@ -278,7 +278,7 @@ if analyse and jd.strip():
 
     with col_found:
         st.markdown(f"### Keywords Found ({len(found)})")
-        st.caption("These JD keywords are present in your resume — good signals for ATS.")
+        st.caption("Already present in resume.")
         if found:
             pills = " ".join([
                 f'<span class="keyword-pill" style="background:rgba(16,185,129,0.15);color:#86efac;">{k}</span>'
@@ -290,7 +290,7 @@ if analyse and jd.strip():
 
     with col_missing:
         st.markdown(f"### Keywords Missing ({len(missing)})")
-        st.caption("These JD keywords are absent from your resume — add them to improve your score.")
+        st.caption("Add these to improve match.")
         if missing:
             pills = " ".join([
                 f'<span class="keyword-pill" style="background:rgba(239,68,68,0.16);color:#fca5a5;">{k}</span>'
@@ -304,7 +304,7 @@ if analyse and jd.strip():
 
     # ── Recommendations ───────────────────────────────────────────────────────
     st.markdown("### What to Fix")
-    st.caption("Specific, actionable changes — not generic advice.")
+    st.caption("Priority fixes for this JD.")
 
     priority_style = {
         "High":   ("rec-high",   "🔴 High Priority"),
@@ -328,7 +328,7 @@ if analyse and jd.strip():
     if headline_suggestion:
         st.divider()
         st.markdown("### Optimised Naukri Headline for This Job")
-        st.caption("Copy this into Naukri → Edit Profile → Resume Headline before applying.")
+        st.caption("Copy to Naukri Resume Headline before applying.")
         st.text_area("ats_headline", value=headline_suggestion, height=80, disabled=True, label_visibility="collapsed")
 
     # ── CTA ───────────────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ if analyse and jd.strip():
         <div style="background:rgba(59,130,246,0.14);border-radius:12px;padding:16px 20px;border-left:4px solid #3B82F6;">
             <strong style="color:#bfdbfe;">Want to tailor your resume for this job?</strong><br>
             <span style="font-size:0.875rem;color:#c9d6f4;">
-            Go to Resume Builder, share the JD, and CareerOS will reposition your experience for this role.
+            Open Resume Builder and tailor for this JD.
             </span>
         </div>
         """, unsafe_allow_html=True)
@@ -350,7 +350,7 @@ if analyse and jd.strip():
         <div style="background:rgba(16,185,129,0.14);border-radius:12px;padding:16px 20px;border-left:4px solid #10B981;">
             <strong style="color:#86efac;">Profile optimized for this domain?</strong><br>
             <span style="font-size:0.875rem;color:#c9d6f4;">
-            Make sure your Naukri headline and skills are updated before you apply.
+            Update headline and skills before applying.
             </span>
         </div>
         """, unsafe_allow_html=True)

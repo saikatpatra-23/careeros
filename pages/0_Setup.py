@@ -52,7 +52,7 @@ with st.container():
     st.markdown(
         f"""
         <div class="co-muted" style="margin-bottom:12px;">
-            Use this code to connect your phone notifications for instant job alerts.
+            Use this code to connect notifications.
         </div>
         <div class="co-chip" style="font-family:'JetBrains Mono', monospace; font-size:1.02rem; margin-bottom:12px;">
             {ntfy_topic}
@@ -75,7 +75,7 @@ with st.container():
     st.markdown('<div class="co-card" style="margin-top:14px;">', unsafe_allow_html=True)
     st.markdown('<div class="co-panel-title"><span>Naukri Credentials</span></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="co-muted" style="margin-bottom:12px;">Your credentials are encrypted with AES-256 and never stored in plain text.</div>',
+        '<div class="co-muted" style="margin-bottom:12px;">Credentials are encrypted and never stored as plain text.</div>',
         unsafe_allow_html=True,
     )
     naukri_email = st.text_input(
@@ -147,4 +147,4 @@ if st.button("Save Preferences", type="primary", use_container_width=True):
     )
     store.save_profile(profile)
     st.success("Setup saved successfully.")
-    st.page_link("app.py", label="Go to Dashboard")
+    st.page_link("app.py", label="Open Dashboard")

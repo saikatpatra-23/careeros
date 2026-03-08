@@ -45,7 +45,7 @@ st.markdown(
     </div>
     <div class="pg-title">
         <div class="pg-name">Dashboard</div>
-        <div class="pg-sub">Your career command center</div>
+        <div class="pg-sub">Career command center</div>
     </div>
     """,
     unsafe_allow_html=True,

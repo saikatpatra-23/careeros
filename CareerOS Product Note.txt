@@ -1076,3 +1076,5 @@ aukri_profile_data and ships update_profile.py.
 [2026-03-08 04:35 IST] Resume Builder interaction refinement: unified chat bubble tone for both assistant and user, and removed oversized disabled generate CTA from pre-ready state to keep chat area cleaner.
 
 [2026-03-08 04:55 IST] Page copy tightening update: Smart Apply setup/inbox guidance, Cover Letter tips, and Profile Optimizer hero messages were rewritten to short actionable text to reduce narrative-heavy screens.
+
+[2026-03-08 05:15 IST] Final parity pass on requested remaining pages: app.py, Setup, Role Clarity, and ATS Checker now use concise microcopy and consistent dark Loveable-style surfaces/typography. Role Clarity result/CTA colors fixed for dark-mode readability.
