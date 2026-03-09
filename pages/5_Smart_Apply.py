@@ -629,6 +629,33 @@ with tab_manual:
     </div>
     """, unsafe_allow_html=True)
 
+    # --- File upload: existing external_jobs.json from local PC ---
+    with st.expander("Upload jobs from local external_jobs.json", expanded=False):
+        st.caption("Run the automation locally first, then upload `D:/Claude Project/external_jobs.json` here to see all shortlisted jobs.")
+        uploaded_file = st.file_uploader("Choose external_jobs.json", type="json", key="ext_jobs_upload")
+
+    uploaded_jobs = []
+    if uploaded_file is not None:
+        try:
+            raw = json.load(uploaded_file)
+            if isinstance(raw, list):
+                for j in raw:
+                    # Normalize field names from naukri_automation.py format
+                    url = j.get("external_url") or j.get("naukri_url") or j.get("url", "")
+                    uploaded_jobs.append({
+                        "title":    j.get("title", ""),
+                        "company":  j.get("company", ""),
+                        "url":      url,
+                        "score":    j.get("score", 0),
+                        "run_date": j.get("saved_on", ""),
+                        "_snippet": j.get("jd_snippet", ""),
+                    })
+                st.success(f"Loaded {len(uploaded_jobs)} jobs from uploaded file.")
+            else:
+                st.error("Invalid format — expected a JSON array.")
+        except Exception as e:
+            st.error(f"Could not parse file: {e}")
+
     # Collect external_list from all run history rows
     all_external = []
     seen_urls = set()
@@ -641,15 +668,22 @@ with tab_manual:
                 job["run_date"] = run.get("date", "")
                 all_external.append(job)
 
+    # Merge uploaded jobs (uploaded takes priority, deduplicate by URL)
+    for job in uploaded_jobs:
+        url = job.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            all_external.append(job)
+
     # Sort by score desc
     all_external.sort(key=lambda x: -x.get("score", 0))
 
     if not all_external:
-        st.info("No external jobs yet. Once your automation runs, high-scoring company-portal jobs will appear here.")
+        st.info("No external jobs yet. Run the automation and upload your `external_jobs.json`, or complete a run — high-scoring company-portal jobs will appear here.")
         st.markdown("""
         <div class="co-empty-state" style="margin-top:16px;">
             <div style="font-size:2rem;">Manual Review</div>
-            <div style="font-size:0.9rem;margin-top:8px;">Waiting for first run...</div>
+            <div style="font-size:0.9rem;margin-top:8px;">Upload your external_jobs.json above to get started.</div>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -673,6 +707,7 @@ with tab_manual:
             # Score colour
             score_color = "#10B981" if score >= 80 else "#F59E0B" if score >= 65 else "#6B7280"
 
+            snippet = job.get("_snippet", "")
             col_info, col_cta = st.columns([4, 1])
             with col_info:
                 st.markdown(f"""
@@ -682,6 +717,7 @@ with tab_manual:
                         <strong style="font-size:0.95rem;">{title}</strong>
                     </div>
                     <div style="color:#9CA3AF;font-size:0.85rem;">{company}</div>
+                    {f'<div style="color:#6B7280;font-size:0.78rem;margin-top:5px;font-style:italic;">{snippet[:120]}…</div>' if snippet else ''}
                     {f'<div style="color:#4B5563;font-size:0.75rem;margin-top:4px;">Found: {run_date}</div>' if run_date else ''}
                 </div>
                 """, unsafe_allow_html=True)
