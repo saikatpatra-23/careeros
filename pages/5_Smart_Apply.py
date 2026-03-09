@@ -129,8 +129,8 @@ if not resume_data:
     st.stop()
 
 # Tabs
-tab_prefs, tab_setup, tab_history, tab_inbox = st.tabs([
-    "Configure", "Download Automation", "Run History", "Recruiter Inbox"
+tab_prefs, tab_setup, tab_history, tab_inbox, tab_manual = st.tabs([
+    "Configure", "Download Automation", "Run History", "Recruiter Inbox", "Manual Review"
 ])
 
 # =============================================================================
@@ -614,4 +614,80 @@ with tab_inbox:
                 if inv.get("reason"):
                     st.caption(f"CareerOS reasoning: {inv.get('reason')}")
 
+
+# =============================================================================
+# TAB 5 - MANUAL REVIEW (External Jobs)
+# =============================================================================
+with tab_manual:
+    st.markdown('<div class="co-section-kicker">Action Required</div><div class="co-section-title">Jobs That Need Manual Apply</div>', unsafe_allow_html=True)
+    st.caption("These jobs scored high but use a company portal (not Naukri Easy Apply). CareerOS can't auto-apply — you need to click and apply directly.")
+
+    st.markdown("""
+    <div class="warning-box">
+        <strong>Why these matter:</strong> Company portals (Amazon, Google, Workday jobs) are where the best roles live.
+        CareerOS scored and shortlisted them — you just need to click Apply.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Collect external_list from all run history rows
+    all_external = []
+    seen_urls = set()
+    history_for_ext = _load_run_history(email, store)
+    for run in history_for_ext:
+        for job in run.get("external_list", []):
+            url = job.get("url", "")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                job["run_date"] = run.get("date", "")
+                all_external.append(job)
+
+    # Sort by score desc
+    all_external.sort(key=lambda x: -x.get("score", 0))
+
+    if not all_external:
+        st.info("No external jobs yet. Once your automation runs, high-scoring company-portal jobs will appear here.")
+        st.markdown("""
+        <div class="co-empty-state" style="margin-top:16px;">
+            <div style="font-size:2rem;">Manual Review</div>
+            <div style="font-size:0.9rem;margin-top:8px;">Waiting for first run...</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        total_ext = len(all_external)
+        st.markdown(f"**{total_ext} jobs** shortlisted by CareerOS — apply directly on the company site.")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Score filter
+        min_score = st.slider("Show jobs with score ≥", min_value=50, max_value=95, value=70, step=5)
+        filtered = [j for j in all_external if j.get("score", 0) >= min_score]
+        st.caption(f"Showing {len(filtered)} of {total_ext} jobs (score ≥ {min_score})")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        for job in filtered:
+            score = job.get("score", 0)
+            title = job.get("title", "Unknown Role")
+            company = job.get("company", "Unknown Company")
+            url = job.get("url", "")
+            run_date = job.get("run_date", "")
+
+            # Score colour
+            score_color = "#10B981" if score >= 80 else "#F59E0B" if score >= 65 else "#6B7280"
+
+            col_info, col_cta = st.columns([4, 1])
+            with col_info:
+                st.markdown(f"""
+                <div class="run-card" style="padding:14px 18px;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                        <span style="background:{score_color}22;color:{score_color};border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">{score}/100</span>
+                        <strong style="font-size:0.95rem;">{title}</strong>
+                    </div>
+                    <div style="color:#9CA3AF;font-size:0.85rem;">{company}</div>
+                    {f'<div style="color:#4B5563;font-size:0.75rem;margin-top:4px;">Found: {run_date}</div>' if run_date else ''}
+                </div>
+                """, unsafe_allow_html=True)
+            with col_cta:
+                if url:
+                    st.link_button("Apply Now →", url, use_container_width=True, type="primary")
+                else:
+                    st.caption("No URL")
 

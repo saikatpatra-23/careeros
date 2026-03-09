@@ -57,10 +57,11 @@ def _sync_results(email: str, results: dict,
                 "jobs_found":   results.get("jobs_found", 0),
                 "jobs_applied": results.get("jobs_applied", 0),
                 "jobs_skipped": results.get("jobs_skipped", 0),
-                "applied_list": results.get("applied_list", []),
-                "skipped_list": results.get("skipped_list", []),
-                "hr_invites":   results.get("hr_invites", []),
-                "errors":       results.get("errors", []),
+                "applied_list":  results.get("applied_list", []),
+                "skipped_list":  results.get("skipped_list", []),
+                "external_list": results.get("external_list", []),
+                "hr_invites":    results.get("hr_invites", []),
+                "errors":        results.get("errors", []),
             }
             resp = requests.post(
                 f"{supabase_url.rstrip('/')}/rest/v1/run_history",
@@ -221,6 +222,7 @@ async def main():
         "jobs_skipped":      0,
         "applied_list":      [],
         "skipped_list":      [],
+        "external_list":     [],
         "hr_invites_found":  0,
         "hr_invites_applied": 0,
         "hr_invites":        [],
@@ -353,6 +355,13 @@ async def main():
                     "title": job.get("title"), "company": job.get("company"),
                     "url": job.get("url"), "easy_apply": job.get("is_easy_apply"),
                 })
+            else:
+                results["external_list"].append({
+                    "title":   job.get("title"),
+                    "company": job.get("company"),
+                    "url":     job.get("url"),
+                    "score":   job.get("score", 0),
+                })
 
             await asyncio.sleep(random.uniform(2, 4))
 
@@ -473,7 +482,6 @@ async def _login_naukri(page, email: str, password: str, results: dict) -> bool:
                     break
             except Exception:
                 continue
-
         shot_path, html_path = await _save_login_debug("login_failure")
         message = f"Login failed - still on login page: {page.url}"
         if issue_text:
@@ -904,6 +912,79 @@ Reply with ONLY the answer, no explanation."""
         return "8"
 
 
+async def _find_apply_button(page):
+    """
+    Find a visible/clickable apply action across Naukri UI variants.
+    Returns an ElementHandle or None.
+    """
+    strict_selectors = [
+        "button[class*='apply-button']",
+        "a[class*='apply-button']",
+        ".applyButton",
+        "button.apply-button",
+        "button:has-text('Easy Apply')",
+        "button:has-text('Apply Now')",
+        "button:has-text('Apply')",
+        "a:has-text('Easy Apply')",
+        "a:has-text('Apply Now')",
+        "a:has-text('Apply')",
+        "#apply-button",
+        "[class*='apply-btn']",
+        "[class*='applyBtn']",
+    ]
+
+    def _looks_like_apply(text: str) -> bool:
+        if not text:
+            return False
+        t = " ".join(text.lower().split())
+        good = ["easy apply", "apply now", "quick apply", "apply"]
+        bad = [
+            "applied",
+            "already applied",
+            "apply on company site",
+            "external apply",
+            "view applications",
+            "share",
+        ]
+        return any(g in t for g in good) and not any(b in t for b in bad)
+
+    for sel in strict_selectors:
+        try:
+            el = await page.query_selector(sel)
+            if not el or not await el.is_visible():
+                continue
+            disabled = await el.get_attribute("disabled")
+            aria_disabled = (await el.get_attribute("aria-disabled") or "").lower()
+            txt = (await el.inner_text() or "").strip()
+            if disabled is None and aria_disabled != "true" and _looks_like_apply(txt):
+                return el
+        except Exception:
+            continue
+
+    for sel in ["button", "a", "[role='button']"]:
+        try:
+            elements = await page.query_selector_all(sel)
+        except Exception:
+            continue
+        for el in elements[:300]:
+            try:
+                if not await el.is_visible():
+                    continue
+                txt = (await el.inner_text() or "").strip()
+                klass = (await el.get_attribute("class") or "")
+                aria = (await el.get_attribute("aria-label") or "")
+                combined = f"{txt} {klass} {aria}"
+                if not _looks_like_apply(combined):
+                    continue
+                disabled = await el.get_attribute("disabled")
+                aria_disabled = (await el.get_attribute("aria-disabled") or "").lower()
+                if disabled is None and aria_disabled != "true":
+                    return el
+            except Exception:
+                continue
+    return None
+
+
 # â”€â”€ Naukri chatbot apply handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: str = "",
                                  current_ctc: float = 11.15, expected_ctc: float = 21.0,
@@ -916,7 +997,15 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
     """
     # Wait for chatbot drawer to become VISIBLE (element may be in DOM but hidden)
     chatbot_visible = False
-    for sel in ["div.chatbot_Drawer", "._chatBotContainer", "[class*='chatbot_Drawer']"]:
+    for sel in [
+        "div.chatbot_Drawer",
+        "._chatBotContainer",
+        "[class*='chatbot_Drawer']",
+        "[class*='chatbot']",
+        "[class*='chatBot']",
+        "[id*='chatbot']",
+        "[aria-label*='chat' i]",
+    ]:
         try:
             await page.wait_for_selector(sel, state="visible", timeout=8000)
             chatbot_visible = True
@@ -949,7 +1038,9 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
         except Exception:
             pass
         try:
-            msgs = await page.query_selector_all("li.botItem.chatbot_ListItem .botMsg span")
+            msgs = await page.query_selector_all(
+                "li.botItem.chatbot_ListItem .botMsg span, [class*='botMsg'] span, [class*='chatbot'] li span"
+            )
             if msgs:
                 last = (await msgs[-1].inner_text()).lower()
                 if any(w in last for w in ["applied", "success", "thank you for apply", "submitted"]):
@@ -961,7 +1052,9 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
         # â”€â”€ Get current question â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         question_text = ""
         try:
-            msgs = await page.query_selector_all("li.botItem.chatbot_ListItem .botMsg span")
+            msgs = await page.query_selector_all(
+                "li.botItem.chatbot_ListItem .botMsg span, [class*='botMsg'] span, [class*='chatbot'] li span"
+            )
             if msgs:
                 question_text = (await msgs[-1].inner_text()).strip()
         except Exception:
@@ -974,7 +1067,7 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
         log.info(f"Chatbot Q{round_num}: '{question_text[:80]}'")
 
         # â”€â”€ Radio button question â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        radio_options = await page.query_selector_all("input.ssrc__radio[type='radio']")
+        radio_options = await page.query_selector_all("input.ssrc__radio[type='radio'], input[type='radio']")
         if radio_options:
             option_values = []
             for radio in radio_options:
@@ -1035,7 +1128,9 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
 
         else:
             # â”€â”€ Text input question â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            chat_input = await page.query_selector("div.textArea[contenteditable='true']")
+            chat_input = await page.query_selector(
+                "div.textArea[contenteditable='true'], [contenteditable='true'][class*='text'], textarea"
+            )
             if not chat_input:
                 log.warning(f"Round {round_num}: no radio and no text input")
                 break
@@ -1044,13 +1139,24 @@ async def _handle_chatbot_apply(page, ai_client, resume_data: dict, job_title: s
                                         current_ctc, expected_ctc, notice_days, current_loc)
             log.info(f"Chatbot text answer: '{answer}'")
             await chat_input.click()
-            await page.evaluate("document.querySelector(\"div.textArea[contenteditable='true']\").textContent = ''")
-            await page.keyboard.type(answer)
+            try:
+                await page.evaluate("""
+                    (() => {
+                        const el = document.querySelector("div.textArea[contenteditable='true'], [contenteditable='true'][class*='text']");
+                        if (el) el.textContent = "";
+                    })()
+                """)
+                await page.keyboard.type(answer)
+            except Exception:
+                try:
+                    await chat_input.fill(answer)
+                except Exception:
+                    pass
             await page.wait_for_timeout(500)
 
         # â”€â”€ Click Save (it's a div.sendMsg, not a button) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         saved = False
-        for sel in ["div.sendMsg", ".sendMsg"]:
+        for sel in ["div.sendMsg", ".sendMsg", "button:has-text('Send')", "[aria-label*='send' i]"]:
             try:
                 save_div = await page.query_selector(sel)
                 if save_div and await save_div.is_visible():
@@ -1208,6 +1314,29 @@ async def _handle_easy_apply_modal(page, current_loc: str = "Mumbai"):
             except Exception:
                 continue
 
+        if modal_found:
+            submit_selectors = [
+                "button:has-text('Apply')",
+                "button:has-text('Submit')",
+                "button:has-text('Continue')",
+                "button:has-text('Next')",
+                "[class*='submit']",
+                "[class*='continue']",
+            ]
+            for sel in submit_selectors:
+                try:
+                    btn = await page.query_selector(sel)
+                    if btn and await btn.is_visible():
+                        txt = (await btn.inner_text() or "").strip().lower()
+                        if "cancel" in txt or "close" in txt:
+                            continue
+                        await btn.click()
+                        await page.wait_for_timeout(1500)
+                        log.info(f"Easy Apply modal submitted via '{txt or sel}'")
+                        break
+                except Exception:
+                    continue
+
     except Exception as e:
         log.debug(f"Easy Apply modal handler: {e}")
 
@@ -1246,13 +1375,36 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
 
         await card.click()
         await page.wait_for_timeout(random.randint(1500, 2500))
+        await _handle_easy_apply_modal(page, current_loc=current_loc)
+
+        # External apply redirect banner (company website)
+        try:
+            body = await page.evaluate("document.body.innerText")
+            if any(
+                s in body.lower()
+                for s in [
+                    "redirected to the company website",
+                    "complete your job application process",
+                    "complete your application on the company website",
+                ]
+            ):
+                log.info(f"External apply redirect detected - {title} @ {company}")
+                return True
+        except Exception:
+            pass
 
         apply_selectors = [
             "button:has-text('Apply Now')",
             "button:has-text('Easy Apply')",
             "button:has-text('Apply')",
+            "button:has-text('I am Interested')",
+            "a:has-text('Apply Now')",
+            "a:has-text('Apply')",
+            "[data-automation*='apply']",
             "[class*='apply-btn']",
             "[class*='applyBtn']",
+            "[class*='applyButton']",
+            "[class*='styles_apply']",
         ]
         apply_btn = None
         for sel in apply_selectors:
@@ -1267,6 +1419,8 @@ async def _apply_inbox_invite(page, job, make_webhook, notif_contact, notif_pref
             except Exception:
                 continue
 
+        if not apply_btn:
+            apply_btn = await _find_apply_button(page)
         if not apply_btn:
             log.warning(f"Apply button not found in inbox panel â€” {title} @ {company}")
             return False
@@ -1353,6 +1507,13 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
             "button:has-text('Easy Apply')",
             "button:has-text('Apply Now')",
             "button:has-text('Apply')",
+            "button:has-text('I am Interested')",
+            "a:has-text('Apply Now')",
+            "a:has-text('Apply')",
+            "[data-automation*='apply']",
+            "[class*='apply-btn']",
+            "[class*='applyBtn']",
+            "[class*='styles_apply']",
             "#apply-button",
         ]
         apply_btn = None
@@ -1376,6 +1537,7 @@ async def _apply_job(page, job, resume_data, make_webhook, notif_contact, notif_
         log.info(f"Attempting apply: {title} @ {company}")
         await apply_btn.click()
         await page.wait_for_timeout(random.randint(3000, 4000))  # chatbot needs time to init
+        await _handle_easy_apply_modal(page, current_loc=current_loc)
 
         # â”€â”€ Step 2: Handle chatbot apply panel (AI-powered) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if ai_client:
