@@ -57,6 +57,13 @@ def _load_run_history(email: str, store: UserStore) -> list:
         return rows
     return store.load_apply_history()
 
+def _load_external_jobs(email: str) -> list:
+    """Fetch external (manual-apply) jobs for this user from Supabase."""
+    return _supabase_fetch(
+        "external_jobs",
+        f"user_email=eq.{email}&order=score.desc&limit=200",
+    )
+
 def _load_hr_invites(email: str, store: UserStore) -> list:
     rows = _supabase_fetch(
         "hr_invites",
@@ -620,110 +627,123 @@ with tab_inbox:
 # =============================================================================
 with tab_manual:
     st.markdown('<div class="co-section-kicker">Action Required</div><div class="co-section-title">Jobs That Need Manual Apply</div>', unsafe_allow_html=True)
-    st.caption("These jobs scored high but use a company portal (not Naukri Easy Apply). CareerOS can't auto-apply — you need to click and apply directly.")
+    st.caption("High-scoring jobs that use a company portal — CareerOS can't auto-apply, you need to click and apply directly.")
 
     st.markdown("""
     <div class="warning-box">
-        <strong>Why these matter:</strong> Company portals (Amazon, Google, Workday jobs) are where the best roles live.
-        CareerOS scored and shortlisted them — you just need to click Apply.
+        <strong>Why these matter:</strong> Company portals (Workday, Greenhouse, direct career pages) host the best senior roles.
+        CareerOS scored and shortlisted them for you — one click to apply.
     </div>
     """, unsafe_allow_html=True)
 
-    # --- File upload: existing external_jobs.json from local PC ---
-    with st.expander("Upload jobs from local external_jobs.json", expanded=False):
-        st.caption("Run the automation locally first, then upload `D:/Claude Project/external_jobs.json` here to see all shortlisted jobs.")
-        uploaded_file = st.file_uploader("Choose external_jobs.json", type="json", key="ext_jobs_upload")
+    st.markdown("""
+    <style>
+    .ext-card {
+        background: #0E1621;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin: 8px 0;
+        border-left: 4px solid #6B7280;
+        position: relative;
+    }
+    .ext-card.green  { border-left-color: #10B981; }
+    .ext-card.amber  { border-left-color: #F59E0B; }
+    .ext-card.orange { border-left-color: #F97316; }
+    .score-badge {
+        display: inline-block;
+        border-radius: 6px;
+        padding: 2px 9px;
+        font-size: 0.76rem;
+        font-weight: 800;
+        margin-right: 8px;
+    }
+    .score-green  { background: rgba(16,185,129,0.15); color: #10B981; }
+    .score-amber  { background: rgba(245,158,11,0.15); color: #F59E0B; }
+    .score-orange { background: rgba(249,115,22,0.15); color: #F97316; }
+    .score-gray   { background: rgba(107,114,128,0.15); color: #9CA3AF; }
+    .card-title   { font-size: 0.97rem; font-weight: 700; color: #F3F4F6; }
+    .card-company { font-size: 0.85rem; color: #9CA3AF; margin-top: 3px; }
+    .card-snippet { font-size: 0.78rem; color: #6B7280; font-style: italic; margin-top: 6px; line-height: 1.4; }
+    .card-date    { font-size: 0.72rem; color: #4B5563; margin-top: 6px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    uploaded_jobs = []
-    if uploaded_file is not None:
-        try:
-            raw = json.load(uploaded_file)
-            if isinstance(raw, list):
-                for j in raw:
-                    # Normalize field names from naukri_automation.py format
-                    url = j.get("external_url") or j.get("naukri_url") or j.get("url", "")
-                    uploaded_jobs.append({
-                        "title":    j.get("title", ""),
-                        "company":  j.get("company", ""),
-                        "url":      url,
-                        "score":    j.get("score", 0),
-                        "run_date": j.get("saved_on", ""),
-                        "_snippet": j.get("jd_snippet", ""),
-                    })
-                st.success(f"Loaded {len(uploaded_jobs)} jobs from uploaded file.")
-            else:
-                st.error("Invalid format — expected a JSON array.")
-        except Exception as e:
-            st.error(f"Could not parse file: {e}")
-
-    # Collect external_list from all run history rows
-    all_external = []
-    seen_urls = set()
-    history_for_ext = _load_run_history(email, store)
-    for run in history_for_ext:
-        for job in run.get("external_list", []):
-            url = job.get("url", "")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
-                job["run_date"] = run.get("date", "")
-                all_external.append(job)
-
-    # Merge uploaded jobs (uploaded takes priority, deduplicate by URL)
-    for job in uploaded_jobs:
-        url = job.get("url", "")
-        if url and url not in seen_urls:
-            seen_urls.add(url)
-            all_external.append(job)
-
-    # Sort by score desc
-    all_external.sort(key=lambda x: -x.get("score", 0))
+    all_external = _load_external_jobs(email)
 
     if not all_external:
-        st.info("No external jobs yet. Run the automation and upload your `external_jobs.json`, or complete a run — high-scoring company-portal jobs will appear here.")
+        st.info("No external jobs yet. Once your automation runs, shortlisted company-portal jobs will appear here automatically.")
         st.markdown("""
         <div class="co-empty-state" style="margin-top:16px;">
-            <div style="font-size:2rem;">Manual Review</div>
-            <div style="font-size:0.9rem;margin-top:8px;">Upload your external_jobs.json above to get started.</div>
+            <div style="font-size:2rem;">Inbox clear</div>
+            <div style="font-size:0.9rem;margin-top:8px;">Run the automation — results sync here within seconds.</div>
         </div>
         """, unsafe_allow_html=True)
     else:
-        total_ext = len(all_external)
-        st.markdown(f"**{total_ext} jobs** shortlisted by CareerOS — apply directly on the company site.")
+        # Stats row
+        total_ext  = len(all_external)
+        strong     = sum(1 for j in all_external if j.get("score", 0) >= 80)
+        good       = sum(1 for j in all_external if 65 <= j.get("score", 0) < 80)
+
+        c1, c2, c3 = st.columns(3)
+        for col, num, label in [
+            (c1, total_ext, "Total Jobs"),
+            (c2, strong,    "Strong Match (80+)"),
+            (c3, good,      "Good Match (65–79)"),
+        ]:
+            col.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-num">{num}</div>
+                <div class="stat-lbl">{label}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Score filter
-        min_score = st.slider("Show jobs with score ≥", min_value=50, max_value=95, value=70, step=5)
-        filtered = [j for j in all_external if j.get("score", 0) >= min_score]
-        st.caption(f"Showing {len(filtered)} of {total_ext} jobs (score ≥ {min_score})")
+        min_score = st.slider("Minimum score", min_value=50, max_value=95, value=65, step=5, key="ext_score_filter")
+        filtered  = [j for j in all_external if j.get("score", 0) >= min_score]
+        st.caption(f"Showing {len(filtered)} of {total_ext} jobs · last 7 days only")
         st.markdown("<br>", unsafe_allow_html=True)
 
         for job in filtered:
-            score = job.get("score", 0)
-            title = job.get("title", "Unknown Role")
+            score   = job.get("score", 0)
+            title   = job.get("title", "Unknown Role")
             company = job.get("company", "Unknown Company")
-            url = job.get("url", "")
-            run_date = job.get("run_date", "")
+            url     = job.get("url", "")
+            saved   = job.get("saved_on", "")
+            snippet = job.get("jd_snippet", "")
 
-            # Score colour
-            score_color = "#10B981" if score >= 80 else "#F59E0B" if score >= 65 else "#6B7280"
+            if score >= 80:
+                card_cls, badge_cls, label = "green",  "score-green",  f"{score}/100"
+            elif score >= 65:
+                card_cls, badge_cls, label = "amber",  "score-amber",  f"{score}/100"
+            elif score >= 50:
+                card_cls, badge_cls, label = "orange", "score-orange", f"{score}/100"
+            else:
+                card_cls, badge_cls, label = "",       "score-gray",   f"{score}/100"
 
-            snippet = job.get("_snippet", "")
-            col_info, col_cta = st.columns([4, 1])
-            with col_info:
+            snippet_html = (
+                f'<div class="card-snippet">{snippet[:160]}{"…" if len(snippet) > 160 else ""}</div>'
+                if snippet else ""
+            )
+            date_html = f'<div class="card-date">Saved: {saved}</div>' if saved else ""
+
+            col_card, col_btn = st.columns([5, 1])
+            with col_card:
                 st.markdown(f"""
-                <div class="run-card" style="padding:14px 18px;">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-                        <span style="background:{score_color}22;color:{score_color};border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">{score}/100</span>
-                        <strong style="font-size:0.95rem;">{title}</strong>
+                <div class="ext-card {card_cls}">
+                    <div>
+                        <span class="score-badge {badge_cls}">{label}</span>
+                        <span class="card-title">{title}</span>
                     </div>
-                    <div style="color:#9CA3AF;font-size:0.85rem;">{company}</div>
-                    {f'<div style="color:#6B7280;font-size:0.78rem;margin-top:5px;font-style:italic;">{snippet[:120]}…</div>' if snippet else ''}
-                    {f'<div style="color:#4B5563;font-size:0.75rem;margin-top:4px;">Found: {run_date}</div>' if run_date else ''}
+                    <div class="card-company">{company}</div>
+                    {snippet_html}
+                    {date_html}
                 </div>
                 """, unsafe_allow_html=True)
-            with col_cta:
+            with col_btn:
+                st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
                 if url:
-                    st.link_button("Apply Now →", url, use_container_width=True, type="primary")
+                    st.link_button("Apply →", url, use_container_width=True, type="primary")
                 else:
                     st.caption("No URL")
 
